@@ -46,6 +46,12 @@ func (c *Command) readConfig() *Config {
 		return nil
 	}
 
+	// Ensure we have a token
+	if cmdConfig.Token == "" {
+		c.Ui.Error("Must specify token using -token")
+		return nil
+	}
+
 	return &cmdConfig
 }
 
@@ -102,7 +108,7 @@ Usage: mqtt-bridgeify agent [options]
 Options:
 
   -localurl=tcp://localhost:1883           URL for the local broker.
-	-localurl=ssl://dev.ninjasphere.co:8883  URL for the remote broker.
+  -localurl=ssl://dev.ninjasphere.co:8883  URL for the remote broker.
   -debug                                   Enables debug output.
   -token=                                  The ninja sphere token.
 `
