@@ -2,6 +2,9 @@
 all:
 	scripts/build.sh
 
+dist:
+	scripts/dist.sh
+
 clean:
 	rm bin/mqtt-bridgeify || true
 	rm -rf .gopath || true
@@ -9,4 +12,4 @@ clean:
 test:
 	go test ./...
 
-.PHONY: all	clean test
+.PHONY: all	dist clean test
