@@ -96,6 +96,15 @@ func (c *Command) Synopsis() string {
 func (c *Command) Help() string {
 	helpText := `
 Usage: mqtt-bridgeify agent [options]
+
+  Starts the MQTT bridgeify agent and runs until an interrupt is received.
+
+Options:
+
+  -localurl=tcp://localhost:1883           URL for the local broker.
+	-localurl=ssl://dev.ninjasphere.co:8883  URL for the remote broker.
+  -debug                                   Enables debug output.
+  -token=                                  The ninja sphere token.
 `
 	return helpText
 }
