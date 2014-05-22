@@ -24,7 +24,7 @@ fi
 echo "Version: ${VERSION} ${PREVERSION}"
 
 # Determine the arch/os combos we're building for
-XC_ARCH=${XC_ARCH:-"amd64"}
+XC_ARCH=${XC_ARCH:-"amd64 arm"}
 XC_OS=${XC_OS:-darwin linux}
 
 echo "Arch: ${XC_ARCH}"
