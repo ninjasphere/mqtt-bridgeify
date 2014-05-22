@@ -26,6 +26,11 @@ type Config struct {
 	Token    string
 	CloudUrl string
 	LocalUrl string
+	Debug bool
+}
+
+func (c *Config) IsDebug() bool{
+	return c.Debug
 }
 
 func (c *Command) readConfig() *Config {
@@ -35,6 +40,7 @@ func (c *Command) readConfig() *Config {
 	cmdFlags.StringVar(&cmdConfig.Token, "token", "", "ninja token")
 	cmdFlags.StringVar(&cmdConfig.LocalUrl, "localurl", "tcp://localhost:1883", "cloud url to connect to")
 	cmdFlags.StringVar(&cmdConfig.CloudUrl, "cloudurl", "ssl://dev.ninjasphere.co:8883", "cloud url to connect to")
+	cmdFlags.BoolVar(&cmdConfig.Debug, "debug", false, "enable debug")
 
 	if err := cmdFlags.Parse(c.args); err != nil {
 		return nil

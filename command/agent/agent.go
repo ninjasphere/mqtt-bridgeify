@@ -44,18 +44,18 @@ func createAgent(conf *Config) *Agent {
 
 func (a *Agent) start() error {
 
-	a.local = buildClient(a.conf.LocalUrl, "")
-	a.remote = buildClient(a.conf.CloudUrl, a.conf.Token)
+	a.local = a.buildClient(a.conf.LocalUrl, "")
+	a.remote = a.buildClient(a.conf.CloudUrl, a.conf.Token)
 
 	// this is a very basic pipe between the two
 	// need to do some work on reconnects and receipt handling
-	subscribe(a.local, a.remote, a.localTopics, "local")
-	subscribe(a.remote, a.local, a.cloudTopics, "cloud")
+	a.subscribe(a.local, a.remote, a.localTopics, "local")
+	a.subscribe(a.remote, a.local, a.cloudTopics, "cloud")
 
 	return nil
 }
 
-func buildClient(server string, token string) *mqtt.MqttClient {
+func (a *Agent) buildClient(server string, token string) *mqtt.MqttClient {
 
 	opts := mqtt.NewClientOptions().SetBroker(server).SetTraceLevel(mqtt.Off).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
 
@@ -73,14 +73,16 @@ func buildClient(server string, token string) *mqtt.MqttClient {
 	return client
 }
 
-func subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []replaceTopic, tag string) {
+func (a *Agent) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []replaceTopic, tag string) {
 	for _, topic := range topics {
 
 		topicFilter, _ := mqtt.NewTopicFilter(topic.on, 0)
 		log.Printf("[%s] subscribed to %s", tag, topic.on)
 
 		if _, err := src.StartSubscription(func(src *mqtt.MqttClient, msg mqtt.Message) {
-			log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
+			if a.conf.IsDebug() {
+				log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
+			}
 			dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
 		}, topicFilter); err != nil {
 			log.Fatalf("error starting subscription: %s", err)
