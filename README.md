@@ -5,7 +5,7 @@ This small app bridges mqtt-topics from local mosquitto to the cloud mqtt broker
 # Usage
 
 ```
-$ mqtt-proxify agent -token XXX
+$ mqtt-bridgeify agent -token XXX
 ```
 
 # Bridge
