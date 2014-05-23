@@ -63,6 +63,9 @@ func (a *Agent) buildClient(server string, token string) *mqtt.MqttClient {
 		opts.SetUsername(token)
 	}
 
+	// pretty much log the reason and quit
+	opts.SetOnConnectionLost(a.onConnectionLoss)
+
 	client := mqtt.NewClient(opts)
 	_, err := client.Start()
 	if err != nil {
@@ -88,4 +91,8 @@ func (a *Agent) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []r
 			log.Fatalf("error starting subscription: %s", err)
 		}
 	}
+}
+
+func (a *Agent) onConnectionLoss(client *mqtt.MqttClient, reason error) {
+	log.Fatalf("Connection failed %s", reason)
 }
