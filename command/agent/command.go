@@ -20,16 +20,17 @@ type Command struct {
 	logFilter  *logutils.LevelFilter
 	logger     *log.Logger
 	agent      *Agent
+	bus        *Bus
 }
 
 type Config struct {
 	Token    string
 	CloudUrl string
 	LocalUrl string
-	Debug bool
+	Debug    bool
 }
 
-func (c *Config) IsDebug() bool{
+func (c *Config) IsDebug() bool {
 	return c.Debug
 }
 
@@ -82,15 +83,18 @@ func (c *Command) Run(args []string) int {
 	c.args = args
 
 	c.Ui.Output("MQTT bridgeify agent running!")
-	c.Ui.Info("Token loaded: " + config.Token)
+	c.Ui.Info("Getting on the bus: " + config.Token)
 	c.Ui.Info("Local url: " + config.LocalUrl)
-	c.Ui.Info("Cloud url: " + config.CloudUrl)
 
 	c.agent = createAgent(config)
 
 	if err := c.agent.start(); err != nil {
 		c.Ui.Error(fmt.Sprintf("error starting agent %s", err))
 	}
+
+	c.bus = createBus(config, c.agent)
+
+	c.bus.listen()
 
 	return c.handleSignals(config)
 }
@@ -108,7 +112,6 @@ Usage: mqtt-bridgeify agent [options]
 Options:
 
   -localurl=tcp://localhost:1883           URL for the local broker.
-  -localurl=ssl://dev.ninjasphere.co:8883  URL for the remote broker.
   -debug                                   Enables debug output.
   -token=                                  The ninja sphere token.
 `
