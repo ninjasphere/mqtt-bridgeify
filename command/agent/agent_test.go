@@ -10,28 +10,33 @@ func Test(t *testing.T) {
 	TestingT(t)
 }
 
-type LoadAgentSuite struct{
-  agent *Agent
-  topic *replaceTopic
+type LoadAgentSuite struct {
+	agent          *Agent
+	topicToCloud   *replaceTopic
+	topicFromCloud *replaceTopic
 }
 
 var _ = Suite(&LoadAgentSuite{})
 
 func (s *LoadAgentSuite) SetUpTest(c *C) {
 
-  conf := &Config{}
+	conf := &Config{}
 
 	s.agent = createAgent(conf)
-  s.topic = &replaceTopic{on: "$location/calibration", replace: "$location", with: "$cloud/location"}
+	s.topicToCloud = &replaceTopic{on: "$location/calibration", replace: "$location", with: "$cloud/location"}
+	s.topicFromCloud = &replaceTopic{on: "$location/calibration", replace: "$location", with: "$cloud/location"}
 }
-
 
 func (s *LoadAgentSuite) TestConfig(c *C) {
 
-  res := s.topic.updated("$location/calibration")
-  exp := "$cloud/location/calibration"
+	res := s.topicToCloud.updated("$location/calibration")
+	exp := "$cloud/location/calibration"
 
-  c.Assert(res, Equals, exp)
+	c.Assert(res, Equals, exp)
 
+	res = s.topicFromCloud.updated("$location/calibration")
+	exp = "$cloud/location/calibration"
+
+	c.Assert(res, Equals, exp)
 
 }

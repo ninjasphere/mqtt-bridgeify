@@ -83,7 +83,9 @@ func (a *Agent) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []r
 		log.Printf("[%s] subscribed to %s", tag, topic.on)
 
 		if _, err := src.StartSubscription(func(src *mqtt.MqttClient, msg mqtt.Message) {
+
 			if a.conf.IsDebug() {
+				log.Printf("%+v [%s]", topic, msg.Topic())
 				log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
 			}
 			dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
