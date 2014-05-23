@@ -82,14 +82,7 @@ func (a *Agent) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []r
 		topicFilter, _ := mqtt.NewTopicFilter(topic.on, 0)
 		log.Printf("[%s] subscribed to %s", tag, topic.on)
 
-		if _, err := src.StartSubscription(func(src *mqtt.MqttClient, msg mqtt.Message) {
-
-			if a.conf.IsDebug() {
-				log.Printf("%+v [%s]", topic, msg.Topic())
-				log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
-			}
-			dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
-		}, topicFilter); err != nil {
+		if _, err := src.StartSubscription(a.buildHandler(topic, tag, dst), topicFilter); err != nil {
 			log.Fatalf("error starting subscription: %s", err)
 		}
 	}
@@ -97,4 +90,14 @@ func (a *Agent) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []r
 
 func (a *Agent) onConnectionLoss(client *mqtt.MqttClient, reason error) {
 	log.Fatalf("Connection failed %s", reason)
+}
+
+func (a *Agent) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClient) mqtt.MessageHandler {
+	return func(src *mqtt.MqttClient, msg mqtt.Message) {
+		if a.conf.IsDebug() {
+			log.Printf("%+v [%s]", topic, msg.Topic())
+			log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
+		}
+		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
+	}
 }
