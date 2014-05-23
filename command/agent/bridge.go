@@ -88,12 +88,7 @@ func (a *Bridge) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []
 		topicFilter, _ := mqtt.NewTopicFilter(topic.on, 0)
 		log.Printf("[%s] subscribed to %s", tag, topic.on)
 
-		if _, err := src.StartSubscription(func(src *mqtt.MqttClient, msg mqtt.Message) {
-			if a.conf.IsDebug() {
-				log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
-			}
-			dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
-		}, topicFilter); err != nil {
+		if _, err := src.StartSubscription(a.buildHandler(topic, tag, dst), topicFilter); err != nil {
 			log.Fatalf("error starting subscription: %s", err)
 		}
 	}
@@ -106,6 +101,15 @@ func (a *Bridge) unsubscribe(client *mqtt.MqttClient, topics []replaceTopic, tag
 	}
 	log.Printf("[%s] unsubscribed to %s", tag, topicNames)
 	client.EndSubscription(topicNames...)
+}
+
+func (a *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClient) mqtt.MessageHandler {
+	return func(src *mqtt.MqttClient, msg mqtt.Message) {
+		if a.conf.IsDebug() {
+			log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
+		}
+		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
+	}
 }
 
 func (a *Bridge) onConnectionLoss(client *mqtt.MqttClient, reason error) {
