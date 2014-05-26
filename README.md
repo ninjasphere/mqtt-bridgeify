@@ -38,3 +38,4 @@ var cloudTopics = []replaceTopic{
   {on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
 }
 ```
+
