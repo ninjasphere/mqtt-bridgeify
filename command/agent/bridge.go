@@ -105,10 +105,7 @@ func (b *Bridge) stop() error {
 		b.Configured = false
 	}
 
-	if b.timer != nil {
-		log.Printf("[INFO] Stopping timer")
-		b.timer.Stop()
-	}
+	b.resetTimer()
 
 	b.disconnectAll()
 
@@ -153,10 +150,6 @@ func (b *Bridge) disconnectAll() {
 
 func (b *Bridge) mainBridgeLoop() {
 
-	// setup a timer
-
-	// setup a shutdown channel
-
 	for {
 		select {
 		case <-b.reconnectCh:
@@ -164,6 +157,7 @@ func (b *Bridge) mainBridgeLoop() {
 			if err := b.connect(); err != nil {
 				b.disconnectAll()
 				log.Printf("[WARN] reconnect failed trying again in 5s")
+				b.resetTimer()
 				b.timer = time.AfterFunc(5*time.Second, func() {
 					b.reconnectCh <- true
 				})
@@ -226,6 +220,13 @@ func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClie
 		}
 		b.Counter++
 		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
+	}
+}
+
+func (b *Bridge) resetTimer() {
+	if b.timer != nil {
+		log.Printf("[INFO] Stopping timer")
+		b.timer.Stop()
 	}
 }
 
