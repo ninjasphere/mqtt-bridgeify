@@ -1,14 +1,6 @@
 package agent
 
-import (
-	. "launchpad.net/gocheck"
-
-	"testing"
-)
-
-func Test(t *testing.T) {
-	TestingT(t)
-}
+import . "launchpad.net/gocheck"
 
 type LoadAgentSuite struct {
 	agent          *Agent
