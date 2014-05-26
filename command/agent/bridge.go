@@ -266,11 +266,24 @@ func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClie
 func (b *Bridge) scheduleReconnect(reason error) {
 	b.LastError = reason
 	b.disconnectAll()
-	log.Printf("[WARN] reconnect failed trying again in 5s")
 	b.resetTimer()
-	b.timer = time.AfterFunc(5*time.Second, func() {
-		b.reconnectCh <- true
-	})
+
+	switch reason {
+	case mqtt.ErrBadCredentials:
+		log.Printf("[WARN] reconnect failed trying again in 5m")
+
+		b.timer = time.AfterFunc(5*time.Minute, func() {
+			b.reconnectCh <- true
+		})
+
+	default:
+		log.Printf("[WARN] reconnect failed trying again in 5s")
+		// TODO add exponential backoff
+		b.timer = time.AfterFunc(5*time.Second, func() {
+			b.reconnectCh <- true
+		})
+	}
+
 }
 
 func (b *Bridge) resetTimer() {
