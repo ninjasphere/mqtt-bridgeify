@@ -2,13 +2,21 @@ package agent
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 )
 
+//
+// Acts as a bridge between local and cloud brokers, this includes reconnecting
+// and emitting status changes.
+//
+// Once configured and started this will attempt to connect to connect to local
+// and cloud brokers, if something dies it will reconnect based on the configured
+// reconnect backoff.
+//
 type Bridge struct {
 	conf   *Config
 	local  *mqtt.MqttClient
@@ -16,6 +24,16 @@ type Bridge struct {
 
 	localTopics []replaceTopic
 	cloudTopics []replaceTopic
+
+	cloudUrl string
+	token    string
+
+	timer       *time.Timer
+	reconnectCh chan bool
+	shutdownCh  chan bool
+
+	Configured bool
+	Connected  bool
 }
 
 type replaceTopic struct {
@@ -39,62 +57,133 @@ var cloudTopics = []replaceTopic{
 }
 
 func createBridge(conf *Config) *Bridge {
-	return &Bridge{conf: conf, localTopics: localTopics, cloudTopics: cloudTopics}
+	return &Bridge{conf: conf, localTopics: localTopics, cloudTopics: cloudTopics, reconnectCh: make(chan bool, 1)}
 }
 
-func (a *Bridge) start() error {
+func (b *Bridge) start(cloudUrl string, token string) error {
 
-	a.local = a.buildClient(a.conf.LocalUrl, "")
-	a.remote = a.buildClient(a.conf.CloudUrl, a.conf.Token)
+	log.Printf("Connecting bridge")
 
-	// this is a very basic pipe between the two
-	// need to do some work on reconnects and receipt handling
-	a.subscribe(a.local, a.remote, a.localTopics, "local")
-	a.subscribe(a.remote, a.local, a.cloudTopics, "cloud")
+	b.Configured = true
+
+	b.cloudUrl = cloudUrl
+	b.token = token
+
+	if err := b.connect(); err != nil {
+		b.disconnect()
+		b.timer = time.AfterFunc(5*time.Second, func() {
+			b.reconnectCh <- true
+		})
+	}
+
+	go b.mainBridgeLoop()
 
 	return nil
 }
 
-func (a *Bridge) stop() error {
-	a.unsubscribe(a.local, a.localTopics, "local")
-	a.unsubscribe(a.remote, a.cloudTopics, "local")
+func (b *Bridge) stop() error {
+
+	log.Printf("Disconnecting bridge")
+
+	b.Configured = false
+	if b.timer != nil {
+		b.timer.Stop()
+	}
+
+	b.unsubscribe(b.local, b.localTopics, "local")
+	b.unsubscribe(b.remote, b.cloudTopics, "local")
+
+	b.disconnect()
+
 	return nil
 }
 
-func (a *Bridge) buildClient(server string, token string) *mqtt.MqttClient {
+func (b *Bridge) connect() (err error) {
 
-	opts := mqtt.NewClientOptions().SetBroker(server).SetTraceLevel(mqtt.Off).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
+	if b.local, err = b.buildClient(b.conf.LocalUrl, ""); err != nil {
+		return err
+	}
+
+	if b.remote, err = b.buildClient(b.cloudUrl, b.token); err != nil {
+		return err
+	}
+
+	if err = b.subscribe(b.local, b.remote, b.localTopics, "local"); err != nil {
+		return err
+	}
+
+	if err = b.subscribe(b.remote, b.local, b.cloudTopics, "cloud"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *Bridge) disconnect() {
+	if b.local != nil && b.local.IsConnected() {
+		b.local.Disconnect(100)
+	}
+	if b.remote != nil && b.remote.IsConnected() {
+		b.local.Disconnect(100)
+	}
+}
+
+func (b *Bridge) mainBridgeLoop() {
+
+	// setup a timer
+
+	// setup a shutdown channel
+
+	for {
+		select {
+
+		case <-b.reconnectCh:
+			log.Printf("[INFO] reconnecting")
+			if err := b.connect(); err != nil {
+				b.disconnect()
+				time.AfterFunc(5*time.Second, func() {
+					b.reconnectCh <- true
+				})
+			}
+		case <-b.shutdownCh:
+			return
+		}
+
+	}
+
+}
+
+func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, error) {
+
+	opts := mqtt.NewClientOptions().SetClientId("123").SetBroker(server).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
 
 	if token != "" {
 		opts.SetUsername(token)
 	}
 
 	// pretty much log the reason and quit
-	opts.SetOnConnectionLost(a.onConnectionLoss)
+	opts.SetOnConnectionLost(b.onConnectionLoss)
 
 	client := mqtt.NewClient(opts)
 	_, err := client.Start()
-	if err != nil {
-		log.Fatalf("error starting connection: %s", err)
-	} else {
-		fmt.Printf("Connected as %s\n", server)
-	}
-	return client
+	return client, err
 }
 
-func (a *Bridge) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []replaceTopic, tag string) {
+func (b *Bridge) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []replaceTopic, tag string) (err error) {
 	for _, topic := range topics {
 
 		topicFilter, _ := mqtt.NewTopicFilter(topic.on, 0)
 		log.Printf("[%s] subscribed to %s", tag, topic.on)
 
-		if _, err := src.StartSubscription(a.buildHandler(topic, tag, dst), topicFilter); err != nil {
-			log.Fatalf("error starting subscription: %s", err)
+		if _, err := src.StartSubscription(b.buildHandler(topic, tag, dst), topicFilter); err != nil {
+			return err
 		}
 	}
+
+	return nil
 }
 
-func (a *Bridge) unsubscribe(client *mqtt.MqttClient, topics []replaceTopic, tag string) {
+func (b *Bridge) unsubscribe(client *mqtt.MqttClient, topics []replaceTopic, tag string) {
 	topicNames := []string{}
 	for _, topic := range topics {
 		topicNames = append(topicNames, topic.on)
@@ -103,15 +192,18 @@ func (a *Bridge) unsubscribe(client *mqtt.MqttClient, topics []replaceTopic, tag
 	client.EndSubscription(topicNames...)
 }
 
-func (a *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClient) mqtt.MessageHandler {
+func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClient) mqtt.MessageHandler {
 	return func(src *mqtt.MqttClient, msg mqtt.Message) {
-		if a.conf.IsDebug() {
+		if b.conf.IsDebug() {
 			log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
 		}
 		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
 	}
 }
 
-func (a *Bridge) onConnectionLoss(client *mqtt.MqttClient, reason error) {
-	log.Fatalf("Connection failed %s", reason)
+func (b *Bridge) onConnectionLoss(client *mqtt.MqttClient, reason error) {
+	log.Printf("[WARN] Connection failed %s", reason)
+	b.disconnect()
+	b.reconnectCh <- true
+
 }

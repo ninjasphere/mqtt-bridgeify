@@ -15,7 +15,7 @@ type LoadBridgeSuite struct {
 	topic *replaceTopic
 }
 
-var _ = Suite(&LoadAgentSuite{})
+var _ = Suite(&LoadBridgeSuite{})
 
 func (s *LoadBridgeSuite) SetUpTest(c *C) {
 
@@ -25,7 +25,7 @@ func (s *LoadBridgeSuite) SetUpTest(c *C) {
 	s.topic = &replaceTopic{on: "$location/calibration", replace: "$location", with: "$cloud/location"}
 }
 
-func (s *LoadAgentSuite) TestConfig(c *C) {
+func (s *LoadBridgeSuite) TestConfig(c *C) {
 
 	res := s.topic.updated("$location/calibration")
 	exp := "$cloud/location/calibration"
