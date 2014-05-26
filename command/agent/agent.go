@@ -2,7 +2,6 @@ package agent
 
 import (
 	"runtime"
-	"runtime/debug"
 	"time"
 )
 
@@ -43,11 +42,10 @@ func (a *Agent) stopBridge(disconnect *disconnectRequest) {
 
 func (a *Agent) getStatus() statsEvent {
 
-	debug.FreeOSMemory()
-
 	runtime.ReadMemStats(a.memstats)
 
 	return statsEvent{
+		LastError:  a.bridge.LastError,
 		Alloc:      a.memstats.Alloc,
 		HeapAlloc:  a.memstats.HeapAlloc,
 		TotalAlloc: a.memstats.TotalAlloc,

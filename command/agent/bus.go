@@ -48,6 +48,8 @@ type statsEvent struct {
 	HeapAlloc  uint64 `json:"heapAlloc"`
 	TotalAlloc uint64 `json:"totalAlloc"`
 
+	LastError error `json:"lastError"`
+
 	Connected  bool  `json:"connected"`
 	Configured bool  `json:"configured"`
 	Count      int64 `json:"count"`

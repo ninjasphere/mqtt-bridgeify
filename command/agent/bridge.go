@@ -38,6 +38,8 @@ type Bridge struct {
 	Connected  bool
 	Counter    int64
 
+	LastError error
+
 	bridgeLock sync.Mutex
 }
 
@@ -262,7 +264,7 @@ func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClie
 }
 
 func (b *Bridge) scheduleReconnect(reason error) {
-
+	b.LastError = reason
 	b.disconnectAll()
 	log.Printf("[WARN] reconnect failed trying again in 5s")
 	b.resetTimer()
