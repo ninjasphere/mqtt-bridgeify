@@ -20,10 +20,10 @@ const (
  Just manages all the data going into out of this service.
 */
 type Bus struct {
-	conf       *Config
-	agent      *Agent
-	client     *mqtt.MqttClient
-	shutdownCh chan struct{}
+	conf   *Config
+	agent  *Agent
+	client *mqtt.MqttClient
+	ticker *time.Ticker
 }
 
 type connectRequest struct {
@@ -42,13 +42,14 @@ type statusEvent struct {
 }
 
 type statsEvent struct {
-	Connected  bool
-	Configured bool
-	MsgCount   int64
+	Connected  bool  `json:"connected"`
+	Configured bool  `json:"configured"`
+	Count      int64 `json:"count"`
 	Time       int64 `json:"ts"`
 }
 
 func createBus(conf *Config, agent *Agent) *Bus {
+
 	return &Bus{conf: conf, agent: agent}
 }
 
@@ -56,6 +57,9 @@ func (b *Bus) listen() {
 	log.Printf("[INFO] connecting to the bus")
 
 	opts := mqtt.NewClientOptions().SetBroker(b.conf.LocalUrl).SetClientId("mqtt-bridgeify")
+
+	// shut up
+	opts.SetTraceLevel(mqtt.Off)
 
 	b.client = mqtt.NewClient(opts)
 
@@ -72,18 +76,22 @@ func (b *Bus) listen() {
 	}
 
 	topicFilter, _ = mqtt.NewTopicFilter(disconnectTopic, 0)
-	if _, err := b.client.StartSubscription(b.handleConnect, topicFilter); err != nil {
+	if _, err := b.client.StartSubscription(b.handleDisconnect, topicFilter); err != nil {
 		log.Fatalf("error starting subscription: %s", err)
 	}
 
 	ev := &statusEvent{
 		Status: "started", Time: time.Now().Unix(),
 	}
+
 	b.client.PublishMessage(statusTopic, b.encodeRequest(ev))
+
+	b.setupBackgroundJob()
 
 }
 
 func (b *Bus) handleConnect(client *mqtt.MqttClient, msg mqtt.Message) {
+	log.Printf("[INFO] handleConnect")
 	req := &connectRequest{}
 	err := b.decodeRequest(&msg, req)
 	if err != nil {
@@ -94,12 +102,28 @@ func (b *Bus) handleConnect(client *mqtt.MqttClient, msg mqtt.Message) {
 }
 
 func (b *Bus) handleDisconnect(client *mqtt.MqttClient, msg mqtt.Message) {
+	log.Printf("[INFO] handleDisconnect")
 	req := &disconnectRequest{}
 	err := b.decodeRequest(&msg, req)
 	if err != nil {
 		log.Printf("[ERR] Unable to decode disconnect request %s", err)
 	}
 	b.agent.stopBridge(req)
+}
+
+func (b *Bus) setupBackgroundJob() {
+	b.ticker = time.NewTicker(10 * time.Second)
+
+	for {
+		select {
+		case <-b.ticker.C:
+			// emit the status
+			status := b.agent.getStatus()
+			log.Printf("[DEBUG] status %+v", status)
+			b.client.PublishMessage(statusTopic, b.encodeRequest(status))
+		}
+	}
+
 }
 
 func (b *Bus) encodeRequest(data interface{}) *mqtt.Message {

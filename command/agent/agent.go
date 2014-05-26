@@ -1,5 +1,7 @@
 package agent
 
+import "time"
+
 //
 // Pulls together the bridge, a cached state configuration and the bus.
 //
@@ -32,4 +34,13 @@ func (a *Agent) startBridge(connect *connectRequest) {
 // save the state of the bridge then disconnect it
 func (a *Agent) stopBridge(disconnect *disconnectRequest) {
 	a.bridge.stop()
+}
+
+func (a *Agent) getStatus() statsEvent {
+	return statsEvent{
+		Connected:  a.bridge.Connected,
+		Configured: a.bridge.Configured,
+		Count:      a.bridge.Counter,
+		Time:       time.Now().Unix(),
+	}
 }
