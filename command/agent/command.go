@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/hashicorp/logutils"
 	"github.com/mitchellh/cli"
@@ -20,16 +22,18 @@ type Command struct {
 	logFilter  *logutils.LevelFilter
 	logger     *log.Logger
 	agent      *Agent
+	bus        *Bus
 }
 
 type Config struct {
-	Token    string
-	CloudUrl string
-	LocalUrl string
-	Debug bool
+	Token       string
+	CloudUrl    string
+	LocalUrl    string
+	Debug       bool
+	StatusTimer int
 }
 
-func (c *Config) IsDebug() bool{
+func (c *Config) IsDebug() bool {
 	return c.Debug
 }
 
@@ -37,18 +41,11 @@ func (c *Command) readConfig() *Config {
 	var cmdConfig Config
 	cmdFlags := flag.NewFlagSet("agent", flag.ContinueOnError)
 	cmdFlags.Usage = func() { c.Ui.Output(c.Help()) }
-	cmdFlags.StringVar(&cmdConfig.Token, "token", "", "ninja token")
 	cmdFlags.StringVar(&cmdConfig.LocalUrl, "localurl", "tcp://localhost:1883", "cloud url to connect to")
-	cmdFlags.StringVar(&cmdConfig.CloudUrl, "cloudurl", "ssl://dev.ninjasphere.co:8883", "cloud url to connect to")
 	cmdFlags.BoolVar(&cmdConfig.Debug, "debug", false, "enable debug")
+	cmdFlags.IntVar(&cmdConfig.StatusTimer, "status", 30, "time in seconds between status messages")
 
 	if err := cmdFlags.Parse(c.args); err != nil {
-		return nil
-	}
-
-	// Ensure we have a token
-	if cmdConfig.Token == "" {
-		c.Ui.Error("Must specify token using -token")
 		return nil
 	}
 
@@ -56,8 +53,12 @@ func (c *Command) readConfig() *Config {
 }
 
 func (c *Command) handleSignals(config *Config) int {
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	var sig os.Signal
 	select {
+	case s := <-signalCh:
+		sig = s
 	case <-c.ShutdownCh:
 		sig = os.Interrupt
 	}
@@ -82,15 +83,18 @@ func (c *Command) Run(args []string) int {
 	c.args = args
 
 	c.Ui.Output("MQTT bridgeify agent running!")
-	c.Ui.Info("Token loaded: " + config.Token)
+	c.Ui.Info("Getting on the bus: " + config.Token)
 	c.Ui.Info("Local url: " + config.LocalUrl)
-	c.Ui.Info("Cloud url: " + config.CloudUrl)
 
 	c.agent = createAgent(config)
 
 	if err := c.agent.start(); err != nil {
 		c.Ui.Error(fmt.Sprintf("error starting agent %s", err))
 	}
+
+	c.bus = createBus(config, c.agent)
+
+	c.bus.listen()
 
 	return c.handleSignals(config)
 }
@@ -107,10 +111,10 @@ Usage: mqtt-bridgeify agent [options]
 
 Options:
 
-  -localurl=tcp://localhost:1883           URL for the local broker.
-  -localurl=ssl://dev.ninjasphere.co:8883  URL for the remote broker.
-  -debug                                   Enables debug output.
-  -token=                                  The ninja sphere token.
+  -localurl=tcp://localhost:1883      URL for the local broker.
+	-dataDir=/var/lib/mqtt-bridgeify    Datastore for state between restarts.
+  -debug                              Enables debug output.
+  -token=                             The ninja sphere token.
 `
 	return helpText
 }

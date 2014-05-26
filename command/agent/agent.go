@@ -1,103 +1,53 @@
 package agent
 
-import (
-	"crypto/tls"
-	"fmt"
-	"log"
-	"strings"
+import "runtime"
 
-	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
-)
-
+//
+// Pulls together the bridge, a cached state configuration and the bus.
+//
 type Agent struct {
-	conf   *Config
-	local  *mqtt.MqttClient
-	remote *mqtt.MqttClient
-
-	localTopics []replaceTopic
-	cloudTopics []replaceTopic
-}
-
-type replaceTopic struct {
-	on      string
-	replace string
-	with    string
-}
-
-func (r *replaceTopic) updated(originalTopic string) string {
-	return strings.Replace(originalTopic, r.replace, r.with, 1)
-}
-
-var localTopics = []replaceTopic{
-	{on: "$location/calibration", replace: "$location", with: "$cloud/location"},
-	{on: "$device/+/+/rssi", replace: "$device", with: "$cloud/device"},
-}
-
-var cloudTopics = []replaceTopic{
-	{on: "$cloud/location/calibration/progress", replace: "$cloud/location", with: "$location"},
-	{on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
+	conf     *Config
+	bridge   *Bridge
+	memstats *runtime.MemStats
+	eventCh  chan statusEvent
 }
 
 func createAgent(conf *Config) *Agent {
-	return &Agent{conf: conf, localTopics: localTopics, cloudTopics: cloudTopics}
+	return &Agent{conf: conf, bridge: createBridge(conf), memstats: &runtime.MemStats{}}
 }
 
+// TODO load the existing configuration on startup and start the bridge if needed
 func (a *Agent) start() error {
-
-	a.local = a.buildClient(a.conf.LocalUrl, "")
-	a.remote = a.buildClient(a.conf.CloudUrl, a.conf.Token)
-
-	// this is a very basic pipe between the two
-	// need to do some work on reconnects and receipt handling
-	a.subscribe(a.local, a.remote, a.localTopics, "local")
-	a.subscribe(a.remote, a.local, a.cloudTopics, "cloud")
 
 	return nil
 }
 
-func (a *Agent) buildClient(server string, token string) *mqtt.MqttClient {
+// stop all the things.
+func (a *Agent) stop() error {
 
-	opts := mqtt.NewClientOptions().SetBroker(server).SetTraceLevel(mqtt.Off).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
-
-	if token != "" {
-		opts.SetUsername(token)
-	}
-
-	// pretty much log the reason and quit
-	opts.SetOnConnectionLost(a.onConnectionLoss)
-
-	client := mqtt.NewClient(opts)
-	_, err := client.Start()
-	if err != nil {
-		log.Fatalf("error starting connection: %s", err)
-	} else {
-		fmt.Printf("Connected as %s\n", server)
-	}
-	return client
+	return nil
 }
 
-func (a *Agent) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []replaceTopic, tag string) {
-	for _, topic := range topics {
-
-		topicFilter, _ := mqtt.NewTopicFilter(topic.on, 0)
-		log.Printf("[%s] subscribed to %s", tag, topic.on)
-
-		if _, err := src.StartSubscription(a.buildHandler(topic, tag, dst), topicFilter); err != nil {
-			log.Fatalf("error starting subscription: %s", err)
-		}
-	}
+func (a *Agent) startBridge(connect *connectRequest) {
+	a.bridge.start(connect.Url, connect.Token)
 }
 
-func (a *Agent) onConnectionLoss(client *mqtt.MqttClient, reason error) {
-	log.Fatalf("Connection failed %s", reason)
+// save the state of the bridge then disconnect it
+func (a *Agent) stopBridge(disconnect *disconnectRequest) {
+	a.bridge.stop()
 }
 
-func (a *Agent) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClient) mqtt.MessageHandler {
-	return func(src *mqtt.MqttClient, msg mqtt.Message) {
-		if a.conf.IsDebug() {
-			log.Printf("%+v [%s]", topic, msg.Topic())
-			log.Printf("[%s] topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
-		}
-		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
+func (a *Agent) getStatus() statsEvent {
+
+	runtime.ReadMemStats(a.memstats)
+
+	return statsEvent{
+		LastError:  a.bridge.LastError,
+		Alloc:      a.memstats.Alloc,
+		HeapAlloc:  a.memstats.HeapAlloc,
+		TotalAlloc: a.memstats.TotalAlloc,
+		Connected:  a.bridge.Connected,
+		Configured: a.bridge.Configured,
+		Count:      a.bridge.Counter,
 	}
 }
