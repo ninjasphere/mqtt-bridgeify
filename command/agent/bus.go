@@ -42,6 +42,12 @@ type statusEvent struct {
 }
 
 type statsEvent struct {
+
+	// memory related information
+	Alloc      uint64 `json:"alloc"`
+	HeapAlloc  uint64 `json:"heapAlloc"`
+	TotalAlloc uint64 `json:"totalAlloc"`
+
 	Connected  bool  `json:"connected"`
 	Configured bool  `json:"configured"`
 	Count      int64 `json:"count"`

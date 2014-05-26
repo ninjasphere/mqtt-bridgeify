@@ -2,6 +2,7 @@ package agent
 
 import (
 	"crypto/tls"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -61,10 +62,15 @@ var cloudTopics = []replaceTopic{
 }
 
 func createBridge(conf *Config) *Bridge {
-	return &Bridge{conf: conf, localTopics: localTopics, cloudTopics: cloudTopics, reconnectCh: make(chan bool, 1), shutdownCh: make(chan bool, 1)}
+	return &Bridge{conf: conf, localTopics: localTopics, cloudTopics: cloudTopics}
 }
 
 func (b *Bridge) start(cloudUrl string, token string) error {
+
+	if b.Configured {
+		log.Printf("[WARN] Already configured.")
+		return nil
+	}
 
 	defer b.bridgeLock.Unlock()
 
@@ -77,12 +83,12 @@ func (b *Bridge) start(cloudUrl string, token string) error {
 	b.cloudUrl = cloudUrl
 	b.token = token
 
+	b.reconnectCh = make(chan bool, 1)
+	b.shutdownCh = make(chan bool, 1)
+
 	if err := b.connect(); err != nil {
-		log.Printf("[WARN] reconnect failed trying again in 5s")
-		b.disconnectAll()
-		b.timer = time.AfterFunc(5*time.Second, func() {
-			b.reconnectCh <- true
-		})
+		log.Printf("[ERROR] connect failed %s", err)
+		b.scheduleReconnect(err)
 	}
 
 	go b.mainBridgeLoop()
@@ -91,6 +97,11 @@ func (b *Bridge) start(cloudUrl string, token string) error {
 }
 
 func (b *Bridge) stop() error {
+
+	if !b.Configured {
+		log.Printf("[WARN] Already unconfigured.")
+		return nil
+	}
 
 	defer b.bridgeLock.Unlock()
 
@@ -122,11 +133,7 @@ func (b *Bridge) connect() (err error) {
 		return err
 	}
 
-	if err = b.subscribe(b.local, b.remote, b.localTopics, "local"); err != nil {
-		return err
-	}
-
-	if err = b.subscribe(b.remote, b.local, b.cloudTopics, "cloud"); err != nil {
+	if err = b.subscriptions(); err != nil {
 		return err
 	}
 
@@ -134,6 +141,39 @@ func (b *Bridge) connect() (err error) {
 	b.Connected = true
 
 	return nil
+}
+
+func (b *Bridge) reconnect() (err error) {
+
+	if _, err = b.local.Start(); err != nil {
+		return err
+	}
+
+	if _, err = b.remote.Start(); err != nil {
+		return err
+	}
+
+	if err = b.subscriptions(); err != nil {
+		return err
+	}
+
+	// we are now connected
+	b.Connected = true
+
+	return nil
+}
+
+func (b *Bridge) subscriptions() (err error) {
+
+	if err = b.subscribe(b.local, b.remote, b.localTopics, "local"); err != nil {
+		return err
+	}
+
+	if err = b.subscribe(b.remote, b.local, b.cloudTopics, "cloud"); err != nil {
+		return err
+	}
+	return nil
+
 }
 
 func (b *Bridge) disconnectAll() {
@@ -154,13 +194,9 @@ func (b *Bridge) mainBridgeLoop() {
 		select {
 		case <-b.reconnectCh:
 			log.Printf("[INFO] reconnecting")
-			if err := b.connect(); err != nil {
-				b.disconnectAll()
-				log.Printf("[WARN] reconnect failed trying again in 5s")
-				b.resetTimer()
-				b.timer = time.AfterFunc(5*time.Second, func() {
-					b.reconnectCh <- true
-				})
+			if err := b.reconnect(); err != nil {
+				log.Printf("[ERROR] reconnect failed %s", err)
+				b.scheduleReconnect(err)
 			}
 		case <-b.shutdownCh:
 			log.Printf("[INFO] shutting down bridge")
@@ -173,11 +209,13 @@ func (b *Bridge) mainBridgeLoop() {
 
 func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, error) {
 
-	opts := mqtt.NewClientOptions().SetClientId("123").SetBroker(server).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
+	opts := mqtt.NewClientOptions().SetBroker(server).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
 
 	if token != "" {
 		opts.SetUsername(token)
 	}
+
+	opts.SetClientId(fmt.Sprintf("%d", time.Now().Unix()))
 
 	// shutup
 	opts.SetTraceLevel(mqtt.Off)
@@ -223,21 +261,28 @@ func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClie
 	}
 }
 
+func (b *Bridge) scheduleReconnect(reason error) {
+
+	b.disconnectAll()
+	log.Printf("[WARN] reconnect failed trying again in 5s")
+	b.resetTimer()
+	b.timer = time.AfterFunc(5*time.Second, func() {
+		b.reconnectCh <- true
+	})
+}
+
 func (b *Bridge) resetTimer() {
 	if b.timer != nil {
-		log.Printf("[INFO] Stopping timer")
 		b.timer.Stop()
 	}
 }
 
 func (b *Bridge) onConnectionLoss(client *mqtt.MqttClient, reason error) {
-	log.Printf("[WARN] Connection failed %s", reason)
+	log.Printf("[ERROR] Connection failed %s", reason)
 
 	// we are now disconnected
 	b.Connected = false
 
-	b.disconnectAll()
-
-	b.reconnectCh <- true
+	b.scheduleReconnect(reason)
 
 }
