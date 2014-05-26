@@ -29,16 +29,13 @@ type Bus struct {
 type connectRequest struct {
 	Url   string `json:"url"`
 	Token string `json:"token"`
-	Time  int64  `json:"ts"`
 }
 
 type disconnectRequest struct {
-	Time int64 `json:"ts"`
 }
 
 type statusEvent struct {
 	Status string `json:"status"`
-	Time   int64  `json:"ts"`
 }
 
 type statsEvent struct {
@@ -88,9 +85,7 @@ func (b *Bus) listen() {
 		log.Fatalf("error starting subscription: %s", err)
 	}
 
-	ev := &statusEvent{
-		Status: "started", Time: time.Now().Unix(),
-	}
+	ev := &statusEvent{Status: "started"}
 
 	b.client.PublishMessage(statusTopic, b.encodeRequest(ev))
 

@@ -1,9 +1,6 @@
 package agent
 
-import (
-	"runtime"
-	"time"
-)
+import "runtime"
 
 //
 // Pulls together the bridge, a cached state configuration and the bus.
@@ -52,6 +49,5 @@ func (a *Agent) getStatus() statsEvent {
 		Connected:  a.bridge.Connected,
 		Configured: a.bridge.Configured,
 		Count:      a.bridge.Counter,
-		Time:       time.Now().Unix(),
 	}
 }
