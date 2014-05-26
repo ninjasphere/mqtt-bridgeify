@@ -141,6 +141,8 @@ func (b *Bridge) connect() (err error) {
 
 func (b *Bridge) disconnectAll() {
 	log.Printf("[INFO] disconnectAll")
+	// we are now disconnected
+	b.Connected = false
 	if b.local != nil && b.local.IsConnected() {
 		b.local.Disconnect(100)
 	}
@@ -230,7 +232,7 @@ func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClie
 func (b *Bridge) onConnectionLoss(client *mqtt.MqttClient, reason error) {
 	log.Printf("[WARN] Connection failed %s", reason)
 
-	// we are now connected
+	// we are now disconnected
 	b.Connected = false
 
 	b.disconnectAll()
