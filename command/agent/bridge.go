@@ -59,7 +59,7 @@ var localTopics = []replaceTopic{
 }
 
 var cloudTopics = []replaceTopic{
-	{on: "$cloud/location/calibration/complete", replace: "$cloud/location", with: "$location"},
+	{on: "$cloud/location/calibration/progress", replace: "$cloud/location", with: "$location"},
 	{on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
 }
 
