@@ -39,10 +39,16 @@ func (a *Agent) stopBridge(disconnect *disconnectRequest) error {
 
 func (a *Agent) getStatus() statsEvent {
 
+	var lastError string
+
+	if a.bridge.LastError != nil {
+		lastError = a.bridge.LastError.Error()
+	}
+
 	runtime.ReadMemStats(a.memstats)
 
 	return statsEvent{
-		LastError:  a.bridge.LastError,
+		LastError:  lastError,
 		Alloc:      a.memstats.Alloc,
 		HeapAlloc:  a.memstats.HeapAlloc,
 		TotalAlloc: a.memstats.TotalAlloc,

@@ -24,19 +24,27 @@ $ mqtt-bridgeify agent
 To instruct it to connect to the cloud you can just.
 
 ```
-mosquitto_pub -m '{"url":"ssl://dev.ninjasphere.co:8883","token":"XXXX"}' -t '$sphere/bridge/connect'
+mosquitto_pub -m '{"id": "123", "url":"ssl://dev.ninjasphere.co:8883","token":"XXXX"}' -t '$sphere/bridge/connect'
 ```
 
 And likewise to disconnect.
 
 ```
-mosquitto_pub -m '{}' -t '$sphere/bridge/disconnect'
+mosquitto_pub -m '{"id": "123"}' -t '$sphere/bridge/disconnect'
 ```
 
 To listen to status messages just run.
 
 ```
-mosquitto_sub -t '$sphere/bridge/status'
+$ mosquitto_sub -t '$sphere/bridge/status'
+{"alloc":499952,"heapAlloc":499952,"totalAlloc":631704,"lastError":"","connected":true,"configured":true,"count":0}
+```
+
+To listen for responses.
+
+```
+$ mosquitto_sub -t '$sphere/bridge/response'
+{"id":"123","connected":true,"configured":true,"lastError":""}
 ```
 
 # Bridge

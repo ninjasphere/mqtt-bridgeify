@@ -45,7 +45,7 @@ type resultStatus struct {
 	Id         string `json:"id"`
 	Connected  bool   `json:"connected"`
 	Configured bool   `json:"configured"`
-	LastError  error  `json:"lastError"`
+	LastError  string `json:"lastError"`
 }
 
 type statsEvent struct {
@@ -55,7 +55,7 @@ type statsEvent struct {
 	HeapAlloc  uint64 `json:"heapAlloc"`
 	TotalAlloc uint64 `json:"totalAlloc"`
 
-	LastError error `json:"lastError"`
+	LastError string `json:"lastError"`
 
 	Connected  bool  `json:"connected"`
 	Configured bool  `json:"configured"`
@@ -133,7 +133,14 @@ func (b *Bus) handleDisconnect(client *mqtt.MqttClient, msg mqtt.Message) {
 }
 
 func (b *Bus) sendResult(id string, connected bool, configured bool, result error) {
-	ev := &resultStatus{Connected: connected, Configured: configured, LastError: result}
+
+	var lastError string
+
+	if result != nil {
+		lastError = result.Error()
+	}
+
+	ev := &resultStatus{Id: id, Connected: connected, Configured: configured, LastError: lastError}
 	b.client.PublishMessage(responseTopic, b.encodeRequest(ev))
 }
 

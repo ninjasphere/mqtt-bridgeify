@@ -12,13 +12,6 @@ import (
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 )
 
-const (
-	CONFIGURED   = "configured"
-	UNCONFIGURED = "unconfigured"
-	CONNECTED    = "connected"
-	DISCONNECTED = "disconnected"
-)
-
 var AlreadyConfigured = errors.New("Already configured")
 var AlreadyUnConfigured = errors.New("Already unconfigured")
 
