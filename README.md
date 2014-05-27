@@ -12,15 +12,31 @@ Usage: mqtt-bridgeify agent [options]
 Options:
 
   -localurl=tcp://localhost:1883           URL for the local broker.
-  -localurl=ssl://dev.ninjasphere.co:8883  URL for the remote broker.
   -debug                                   Enables debug output.
-  -token=                                  The ninja sphere token.
 ```
 
 Typically you will just pass in your token.
 
 ```
-$ mqtt-bridgeify agent -token XXX
+$ mqtt-bridgeify agent
+```
+
+To instruct it to connect to the cloud you can just.
+
+```
+mosquitto_pub -m '{"url":"ssl://dev.ninjasphere.co:8883","token":"XXXX"}' -t '$sphere/bridge/connect'
+```
+
+And likewise to disconnect.
+
+```
+mosquitto_pub -m '{}' -t '$sphere/bridge/disconnect'
+```
+
+To listen to status messages just run.
+
+```
+mosquitto_sub -t '$sphere/bridge/status'
 ```
 
 # Bridge
@@ -38,4 +54,3 @@ var cloudTopics = []replaceTopic{
   {on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
 }
 ```
-
