@@ -9,18 +9,6 @@ import (
 )
 
 func main() {
-
-	cfg := profile.Config{
-		MemProfile:  true,
-		ProfilePath: ".", // store profiles in current directory
-	}
-
-	// p.Stop() must be called before the program exits to
-	// ensure profiling information is written to disk.
-	p := profile.Start(&cfg)
-
-	defer p.Stop()
-
 	os.Exit(realMain())
 }
 
