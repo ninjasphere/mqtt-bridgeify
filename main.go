@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-
-	"github.com/davecheney/profile"
 	"github.com/mitchellh/cli"
 )
 
