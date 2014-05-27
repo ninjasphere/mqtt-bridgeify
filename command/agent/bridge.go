@@ -2,6 +2,7 @@ package agent
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -10,6 +11,16 @@ import (
 
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 )
+
+const (
+	CONFIGURED   = "configured"
+	UNCONFIGURED = "unconfigured"
+	CONNECTED    = "connected"
+	DISCONNECTED = "disconnected"
+)
+
+var AlreadyConfigured = errors.New("Already configured")
+var AlreadyUnConfigured = errors.New("Already unconfigured")
 
 //
 // Acts as a bridge between local and cloud brokers, this includes reconnecting
@@ -67,11 +78,11 @@ func createBridge(conf *Config) *Bridge {
 	return &Bridge{conf: conf, localTopics: localTopics, cloudTopics: cloudTopics}
 }
 
-func (b *Bridge) start(cloudUrl string, token string) error {
+func (b *Bridge) start(cloudUrl string, token string) (err error) {
 
 	if b.Configured {
 		log.Printf("[WARN] Already configured.")
-		return nil
+		return AlreadyConfigured
 	}
 
 	defer b.bridgeLock.Unlock()
@@ -88,21 +99,21 @@ func (b *Bridge) start(cloudUrl string, token string) error {
 	b.reconnectCh = make(chan bool, 1)
 	b.shutdownCh = make(chan bool, 1)
 
-	if err := b.connect(); err != nil {
+	if err = b.connect(); err != nil {
 		log.Printf("[ERROR] connect failed %s", err)
 		b.scheduleReconnect(err)
 	}
 
 	go b.mainBridgeLoop()
 
-	return nil
+	return err
 }
 
 func (b *Bridge) stop() error {
 
 	if !b.Configured {
 		log.Printf("[WARN] Already unconfigured.")
-		return nil
+		return AlreadyUnConfigured
 	}
 
 	defer b.bridgeLock.Unlock()

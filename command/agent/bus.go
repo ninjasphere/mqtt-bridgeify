@@ -14,6 +14,7 @@ const (
 	connectTopic    = "$sphere/bridge/connect"
 	disconnectTopic = "$sphere/bridge/disconnect"
 	statusTopic     = "$sphere/bridge/status"
+	responseTopic   = "$sphere/bridge/response"
 )
 
 /*
@@ -27,15 +28,24 @@ type Bus struct {
 }
 
 type connectRequest struct {
+	Id    string `json:"id"`
 	Url   string `json:"url"`
 	Token string `json:"token"`
 }
 
 type disconnectRequest struct {
+	Id string `json:"id"`
 }
 
 type statusEvent struct {
 	Status string `json:"status"`
+}
+
+type resultStatus struct {
+	Id         string `json:"id"`
+	Connected  bool   `json:"connected"`
+	Configured bool   `json:"configured"`
+	LastError  error  `json:"lastError"`
 }
 
 type statsEvent struct {
@@ -50,7 +60,6 @@ type statsEvent struct {
 	Connected  bool  `json:"connected"`
 	Configured bool  `json:"configured"`
 	Count      int64 `json:"count"`
-	Time       int64 `json:"ts"`
 }
 
 func createBus(conf *Config, agent *Agent) *Bus {
@@ -61,7 +70,7 @@ func createBus(conf *Config, agent *Agent) *Bus {
 func (b *Bus) listen() {
 	log.Printf("[INFO] connecting to the bus")
 
-	opts := mqtt.NewClientOptions().SetBroker(b.conf.LocalUrl).SetClientId("mqtt-bridgeify")
+	opts := mqtt.NewClientOptions().SetBroker(b.conf.LocalUrl).SetClientId("sphere-leds")
 
 	// shut up
 	opts.SetTraceLevel(mqtt.Off)
@@ -100,7 +109,14 @@ func (b *Bus) handleConnect(client *mqtt.MqttClient, msg mqtt.Message) {
 	if err != nil {
 		log.Printf("[ERR] Unable to decode connect request %s", err)
 	}
-	b.agent.startBridge(req)
+
+	if err := b.agent.startBridge(req); err != nil {
+		// send out a bad result
+		b.sendResult(req.Id, false, true, err)
+	} else {
+		// send out a good result
+		b.sendResult(req.Id, true, true, err)
+	}
 
 }
 
@@ -111,7 +127,14 @@ func (b *Bus) handleDisconnect(client *mqtt.MqttClient, msg mqtt.Message) {
 	if err != nil {
 		log.Printf("[ERR] Unable to decode disconnect request %s", err)
 	}
-	b.agent.stopBridge(req)
+	err = b.agent.stopBridge(req)
+	// send out a result
+	b.sendResult(req.Id, true, true, err)
+}
+
+func (b *Bus) sendResult(id string, connected bool, configured bool, result error) {
+	ev := &resultStatus{Connected: connected, Configured: configured, LastError: result}
+	b.client.PublishMessage(responseTopic, b.encodeRequest(ev))
 }
 
 func (b *Bus) setupBackgroundJob() {

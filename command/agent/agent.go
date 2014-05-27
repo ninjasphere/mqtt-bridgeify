@@ -28,13 +28,13 @@ func (a *Agent) stop() error {
 	return nil
 }
 
-func (a *Agent) startBridge(connect *connectRequest) {
-	a.bridge.start(connect.Url, connect.Token)
+func (a *Agent) startBridge(connect *connectRequest) error {
+	return a.bridge.start(connect.Url, connect.Token)
 }
 
 // save the state of the bridge then disconnect it
-func (a *Agent) stopBridge(disconnect *disconnectRequest) {
-	a.bridge.stop()
+func (a *Agent) stopBridge(disconnect *disconnectRequest) error {
+	return a.bridge.stop()
 }
 
 func (a *Agent) getStatus() statsEvent {
