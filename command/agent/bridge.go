@@ -59,7 +59,7 @@ func (r *replaceTopic) updated(originalTopic string) string {
 
 var localTopics = []replaceTopic{
 	{on: "$location/calibration", replace: "$location", with: "$cloud/location"},
-	{on: "$location/delete/+", replace: "$location", with: "$cloud/location"},
+	{on: "$location/delete", replace: "$location", with: "$cloud/location"},
 	{on: "$device/+/+/rssi", replace: "$device", with: "$cloud/device"},
 }
 
