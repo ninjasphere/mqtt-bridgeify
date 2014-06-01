@@ -224,8 +224,12 @@ func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, err
 
 	opts.SetClientId(fmt.Sprintf("%d", time.Now().Unix()))
 
-	// shutup
-	opts.SetTraceLevel(mqtt.Off)
+	if !b.conf.Debug {
+
+		// shutup
+		opts.SetTraceLevel(mqtt.Off)
+
+	}
 
 	// pretty much log the reason and quit
 	opts.SetOnConnectionLost(b.onConnectionLoss)
