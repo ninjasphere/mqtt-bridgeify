@@ -21,12 +21,12 @@ func (c *VersionCommand) Help() string {
 
 func (c *VersionCommand) Run(_ []string) int {
 	var versionString bytes.Buffer
-	fmt.Fprintf(&versionString, "MQTT Proxify v%s", c.Version)
+	fmt.Fprintf(&versionString, "MQTT Bridgeify v%s", c.Version)
 
 	c.Ui.Output(versionString.String())
 	return 0
 }
 
 func (c *VersionCommand) Synopsis() string {
-	return "Prints the MQTT Proxify version"
+	return "Prints the MQTT Bridgeify version"
 }
