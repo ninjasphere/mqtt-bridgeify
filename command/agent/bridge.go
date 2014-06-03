@@ -133,10 +133,12 @@ func (b *Bridge) stop() error {
 func (b *Bridge) connect() (err error) {
 
 	if b.local, err = b.buildClient(b.conf.LocalUrl, ""); err != nil {
+		b.Connected = false
 		return err
 	}
 
 	if b.remote, err = b.buildClient(b.cloudUrl, b.token); err != nil {
+		b.Connected = false
 		return err
 	}
 
@@ -166,6 +168,7 @@ func (b *Bridge) reconnect() (err error) {
 
 	// we are now connected
 	b.Connected = true
+	b.LastError = nil
 
 	return nil
 }
@@ -281,9 +284,9 @@ func (b *Bridge) scheduleReconnect(reason error) {
 
 	switch reason {
 	case mqtt.ErrBadCredentials:
-		log.Printf("[WARN] reconnect failed trying again in 5m")
+		log.Printf("[WARN] reconnect failed trying again in 30s")
 
-		b.timer = time.AfterFunc(5*time.Minute, func() {
+		b.timer = time.AfterFunc(30*time.Second, func() {
 			b.reconnectCh <- true
 		})
 
@@ -311,4 +314,11 @@ func (b *Bridge) onConnectionLoss(client *mqtt.MqttClient, reason error) {
 
 	b.scheduleReconnect(reason)
 
+}
+
+func (b *Bridge) IsConnected() bool {
+	if b.remote == nil || b.local == nil {
+		return false
+	}
+	return (b.remote.IsConnected() && b.local.IsConnected())
 }

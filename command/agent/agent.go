@@ -52,7 +52,7 @@ func (a *Agent) getStatus() statsEvent {
 		Alloc:      a.memstats.Alloc,
 		HeapAlloc:  a.memstats.HeapAlloc,
 		TotalAlloc: a.memstats.TotalAlloc,
-		Connected:  a.bridge.Connected,
+		Connected:  a.bridge.IsConnected(),
 		Configured: a.bridge.Configured,
 		Count:      a.bridge.Counter,
 	}
