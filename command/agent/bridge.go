@@ -154,11 +154,13 @@ func (b *Bridge) connect() (err error) {
 
 func (b *Bridge) reconnect() (err error) {
 
-	if _, err = b.local.Start(); err != nil {
+	if b.local, err = b.buildClient(b.conf.LocalUrl, ""); err != nil {
+		b.Connected = false
 		return err
 	}
 
-	if _, err = b.remote.Start(); err != nil {
+	if b.remote, err = b.buildClient(b.cloudUrl, b.token); err != nil {
+		b.Connected = false
 		return err
 	}
 
@@ -218,6 +220,8 @@ func (b *Bridge) mainBridgeLoop() {
 }
 
 func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, error) {
+
+	log.Printf("building client for %s", server)
 
 	opts := mqtt.NewClientOptions().SetBroker(server).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
 
