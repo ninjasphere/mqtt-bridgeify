@@ -21,7 +21,7 @@ var _ = Suite(&LoadBusSuite{})
 func (s *LoadBusSuite) SetUpTest(c *C) {
 
 	s.bus = &Bus{}
-	s.sampleJson = `{"url":"ssl://dev.ninjasphere.co","token":"123123123"}`
+	s.sampleJson = `{"id":"","url":"ssl://dev.ninjasphere.co","token":"123123123"}`
 	s.connectReq = &connectRequest{
 		Url:   "ssl://dev.ninjasphere.co",
 		Token: "123123123",

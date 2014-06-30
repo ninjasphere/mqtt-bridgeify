@@ -29,6 +29,7 @@ type Config struct {
 	Token       string
 	CloudUrl    string
 	LocalUrl    string
+	SerialNo    string
 	Debug       bool
 	StatusTimer int
 }
@@ -42,6 +43,7 @@ func (c *Command) readConfig() *Config {
 	cmdFlags := flag.NewFlagSet("agent", flag.ContinueOnError)
 	cmdFlags.Usage = func() { c.Ui.Output(c.Help()) }
 	cmdFlags.StringVar(&cmdConfig.LocalUrl, "localurl", "tcp://localhost:1883", "cloud url to connect to")
+	cmdFlags.StringVar(&cmdConfig.SerialNo, "serial", "unknown", "the serial number of the device")
 	cmdFlags.BoolVar(&cmdConfig.Debug, "debug", false, "enable debug")
 	cmdFlags.IntVar(&cmdConfig.StatusTimer, "status", 30, "time in seconds between status messages")
 
@@ -112,9 +114,8 @@ Usage: mqtt-bridgeify agent [options]
 Options:
 
   -localurl=tcp://localhost:1883      URL for the local broker.
-	-dataDir=/var/lib/mqtt-bridgeify    Datastore for state between restarts.
+  -serial=123123                      Configure the Serial number of the device.
   -debug                              Enables debug output.
-  -token=                             The ninja sphere token.
 `
 	return helpText
 }

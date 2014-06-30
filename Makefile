@@ -10,6 +10,9 @@ clean:
 	rm -rf .gopath || true
 
 test:
-	go test ./...
+	go test -v ./...
+
+vet:
+	go vet ./...
 
 .PHONY: all	dist clean test

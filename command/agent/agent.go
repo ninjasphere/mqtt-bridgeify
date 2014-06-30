@@ -9,11 +9,17 @@ type Agent struct {
 	conf     *Config
 	bridge   *Bridge
 	memstats *runtime.MemStats
+	metrics  *MetricService
 	eventCh  chan statusEvent
 }
 
 func createAgent(conf *Config) *Agent {
-	return &Agent{conf: conf, bridge: createBridge(conf), memstats: &runtime.MemStats{}}
+	return &Agent{
+		conf:     conf,
+		bridge:   createBridge(conf),
+		memstats: &runtime.MemStats{},
+		metrics:  CreateMetricService(),
+	}
 }
 
 // TODO load the existing configuration on startup and start the bridge if needed
@@ -35,6 +41,10 @@ func (a *Agent) startBridge(connect *connectRequest) error {
 // save the state of the bridge then disconnect it
 func (a *Agent) stopBridge(disconnect *disconnectRequest) error {
 	return a.bridge.stop()
+}
+
+func (a *Agent) getMetrics() *metricsEvent {
+	return a.metrics.buildMetricsRequest()
 }
 
 func (a *Agent) getStatus() statsEvent {

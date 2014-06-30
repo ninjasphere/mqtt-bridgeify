@@ -21,10 +21,10 @@ const (
  Just manages all the data going into out of this service.
 */
 type Bus struct {
-	conf   *Config
-	agent  *Agent
-	client *mqtt.MqttClient
-	ticker *time.Ticker
+	conf         *Config
+	agent        *Agent
+	client       *mqtt.MqttClient
+	statusTicker *time.Ticker
 }
 
 type connectRequest struct {
@@ -145,15 +145,22 @@ func (b *Bus) sendResult(id string, connected bool, configured bool, result erro
 }
 
 func (b *Bus) setupBackgroundJob() {
-	b.ticker = time.NewTicker(10 * time.Second)
+	b.statusTicker = time.NewTicker(10 * time.Second)
+
+	metricsTicker := time.NewTicker(5 * time.Second)
 
 	for {
 		select {
-		case <-b.ticker.C:
+		case <-b.statusTicker.C:
 			// emit the status
 			status := b.agent.getStatus()
 			log.Printf("[DEBUG] status %+v", status)
 			b.client.PublishMessage(statusTopic, b.encodeRequest(status))
+		case <-metricsTicker.C:
+			metrics := b.agent.getMetrics()
+			log.Printf("[DEBUG] metrics %+v", metrics)
+			b.client.PublishMessage(fmt.Sprintf("$node/%s/module/status", b.conf.SerialNo), b.encodeRequest(metrics))
+
 		}
 	}
 
