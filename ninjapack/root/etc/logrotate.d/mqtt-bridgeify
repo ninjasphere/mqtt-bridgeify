@@ -1,0 +1,6 @@
+/var/log/mqtt-brigeify.log {
+    size 1M
+    copytruncate
+    rotate 2
+    missingok
+}
