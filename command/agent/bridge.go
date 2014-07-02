@@ -67,6 +67,8 @@ var localTopics = []replaceTopic{
 var cloudTopics = []replaceTopic{
 	{on: "$cloud/location/calibration/progress", replace: "$cloud/location", with: "$location"},
 	{on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
+	{on: "$cloud/device/+/announce", replace: "$cloud/device", with: "$device"},
+	{on: "$cloud/device/+/channel/+/+/announce", replace: "$cloud/device", with: "$device"},
 }
 
 func createBridge(conf *Config) *Bridge {
