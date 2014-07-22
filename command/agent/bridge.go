@@ -64,6 +64,7 @@ var localTopics = []replaceTopic{
 	{on: "$node/+/module/status", replace: "$node", with: "$cloud/node"},
 	{on: "$device/+/channel/+/+", replace: "$device", with: "$cloud/device"},
 	{on: "$device/+/channel/+/+/event/+", replace: "$device", with: "$cloud/device"},
+	{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
 }
 
 var cloudTopics = []replaceTopic{
@@ -72,6 +73,7 @@ var cloudTopics = []replaceTopic{
 	{on: "$cloud/device/+/announce", replace: "$cloud/device", with: "$device"},
 	{on: "$cloud/device/+/channel/+/+/announce", replace: "$cloud/device", with: "$device"},
 	{on: "$cloud/device/+/channel/+/+/reply", replace: "$cloud/device", with: "$device"},
+	{on: "$cloud/ninja/services/rpc/+/+/reply", replace: "$cloud/ninja", with: "$ninja"},
 }
 
 func createBridge(conf *Config) *Bridge {
