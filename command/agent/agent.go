@@ -1,6 +1,10 @@
 package agent
 
-import "runtime"
+import (
+	"runtime"
+
+	"github.com/juju/loggo"
+)
 
 //
 // Pulls together the bridge, a cached state configuration and the bus.
@@ -11,6 +15,7 @@ type Agent struct {
 	memstats *runtime.MemStats
 	metrics  *MetricService
 	eventCh  chan statusEvent
+	log      loggo.Logger
 }
 
 func createAgent(conf *Config) *Agent {
@@ -19,6 +24,7 @@ func createAgent(conf *Config) *Agent {
 		bridge:   createBridge(conf),
 		memstats: &runtime.MemStats{},
 		metrics:  CreateMetricService(),
+		log:      loggo.GetLogger("agent"),
 	}
 }
 

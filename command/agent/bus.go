@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/juju/loggo"
 
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 )
@@ -25,6 +26,7 @@ type Bus struct {
 	agent        *Agent
 	client       *mqtt.MqttClient
 	statusTicker *time.Ticker
+	log          loggo.Logger
 }
 
 type connectRequest struct {
@@ -64,11 +66,11 @@ type statsEvent struct {
 
 func createBus(conf *Config, agent *Agent) *Bus {
 
-	return &Bus{conf: conf, agent: agent}
+	return &Bus{conf: conf, agent: agent, log: loggo.GetLogger("bus")}
 }
 
 func (b *Bus) listen() {
-	log.Printf("[INFO] connecting to the bus")
+	b.log.Infof("connecting to the bus")
 
 	opts := mqtt.NewClientOptions().SetBroker(b.conf.LocalUrl).SetClientId("mqtt-bridgeify-bus")
 
@@ -79,19 +81,25 @@ func (b *Bus) listen() {
 
 	_, err := b.client.Start()
 	if err != nil {
-		log.Fatalf("error starting connection: %s", err)
+		b.log.Errorf("Can't start connection: %s", err)
 	} else {
-		fmt.Printf("Connected as %s\n", b.conf.LocalUrl)
+		b.log.Infof("Connected as %s\n", b.conf.LocalUrl)
 	}
 
 	topicFilter, _ := mqtt.NewTopicFilter(connectTopic, 0)
-	if _, err := b.client.StartSubscription(b.handleConnect, topicFilter); err != nil {
-		log.Fatalf("error starting subscription: %s", err)
+	if receipt, err := b.client.StartSubscription(b.handleConnect, topicFilter); err != nil {
+		b.log.Errorf("Subscription Failed: %s", err)
+	} else {
+		<-receipt
+		b.log.Infof("Subscribed to: %+v", topicFilter)
 	}
 
 	topicFilter, _ = mqtt.NewTopicFilter(disconnectTopic, 0)
-	if _, err := b.client.StartSubscription(b.handleDisconnect, topicFilter); err != nil {
-		log.Fatalf("error starting subscription: %s", err)
+	if receipt, err := b.client.StartSubscription(b.handleDisconnect, topicFilter); err != nil {
+		b.log.Errorf("Subscription Failed: %s", err)
+	} else {
+		<-receipt
+		b.log.Infof("Subscribed to: %+v", topicFilter)
 	}
 
 	ev := &statusEvent{Status: "started"}
@@ -103,11 +111,11 @@ func (b *Bus) listen() {
 }
 
 func (b *Bus) handleConnect(client *mqtt.MqttClient, msg mqtt.Message) {
-	log.Printf("[INFO] handleConnect")
+	b.log.Infof("handleConnect")
 	req := &connectRequest{}
 	err := b.decodeRequest(&msg, req)
 	if err != nil {
-		log.Printf("[ERR] Unable to decode connect request %s", err)
+		b.log.Errorf("Unable to decode connect request %s", err)
 	}
 
 	if err := b.agent.startBridge(req); err != nil {
@@ -121,11 +129,11 @@ func (b *Bus) handleConnect(client *mqtt.MqttClient, msg mqtt.Message) {
 }
 
 func (b *Bus) handleDisconnect(client *mqtt.MqttClient, msg mqtt.Message) {
-	log.Printf("[INFO] handleDisconnect")
+	b.log.Infof("handleDisconnect")
 	req := &disconnectRequest{}
 	err := b.decodeRequest(&msg, req)
 	if err != nil {
-		log.Printf("[ERR] Unable to decode disconnect request %s", err)
+		b.log.Errorf("Unable to decode disconnect request %s", err)
 	}
 	err = b.agent.stopBridge(req)
 	// send out a result
@@ -154,11 +162,11 @@ func (b *Bus) setupBackgroundJob() {
 		case <-b.statusTicker.C:
 			// emit the status
 			status := b.agent.getStatus()
-			log.Printf("[DEBUG] status %+v", status)
+			b.log.Debugf("status %+v", status)
 			b.client.PublishMessage(statusTopic, b.encodeRequest(status))
 		case <-metricsTicker.C:
 			metrics := b.agent.getMetrics()
-			log.Printf("[DEBUG] metrics %+v", metrics)
+			b.log.Debugf("metrics %+v", metrics)
 			b.client.PublishMessage(fmt.Sprintf("$node/%s/module/status", b.conf.SerialNo), b.encodeRequest(metrics))
 
 		}

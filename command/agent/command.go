@@ -3,12 +3,12 @@ package agent
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/hashicorp/logutils"
+	"github.com/juju/loggo"
 	"github.com/mitchellh/cli"
 )
 
@@ -20,7 +20,7 @@ type Command struct {
 	ShutdownCh <-chan struct{}
 	args       []string
 	logFilter  *logutils.LevelFilter
-	logger     *log.Logger
+	log        loggo.Logger
 	agent      *Agent
 	bus        *Bus
 }
@@ -49,6 +49,13 @@ func (c *Command) readConfig() *Config {
 
 	if err := cmdFlags.Parse(c.args); err != nil {
 		return nil
+	}
+
+	//if cmdFLags.
+	if cmdConfig.Debug {
+		loggo.GetLogger("").SetLogLevel(loggo.DEBUG)
+	} else {
+		loggo.GetLogger("").SetLogLevel(loggo.INFO)
 	}
 
 	return &cmdConfig
@@ -87,6 +94,8 @@ func (c *Command) Run(args []string) int {
 	c.Ui.Output("MQTT bridgeify agent running!")
 	c.Ui.Info("Getting on the bus: " + config.Token)
 	c.Ui.Info("Local url: " + config.LocalUrl)
+
+	c.log = loggo.GetLogger("")
 
 	c.agent = createAgent(config)
 
