@@ -72,10 +72,7 @@ func createBus(conf *Config, agent *Agent) *Bus {
 func (b *Bus) listen() {
 	b.log.Infof("connecting to the bus")
 
-	opts := mqtt.NewClientOptions().SetBroker(b.conf.LocalUrl).SetClientId("mqtt-bridgeify-bus")
-
-	// shut up
-	opts.SetTraceLevel(mqtt.Off)
+	opts := mqtt.NewClientOptions().AddBroker(b.conf.LocalUrl).SetClientId("mqtt-bridgeify-bus")
 
 	b.client = mqtt.NewClient(opts)
 

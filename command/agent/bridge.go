@@ -233,7 +233,7 @@ func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, err
 
 	b.log.Infof("building client for %s", server)
 
-	opts := mqtt.NewClientOptions().SetBroker(server).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
+	opts := mqtt.NewClientOptions().AddBroker(server).SetTlsConfig(&tls.Config{InsecureSkipVerify: true})
 
 	if token != "" {
 		opts.SetUsername(token)
@@ -241,14 +241,7 @@ func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, err
 
 	opts.SetClientId(fmt.Sprintf("%d", time.Now().Unix()))
 
-	opts.SetTimeout(15) // set a 15 second ping time for ELB
-
-	if !b.conf.Debug {
-
-		// shutup
-		opts.SetTraceLevel(mqtt.Off)
-
-	}
+	opts.SetWriteTimeout(15) // set a 15 second ping time for ELB
 
 	// pretty much log the reason and quit
 	opts.SetOnConnectionLost(b.onConnectionLoss)
