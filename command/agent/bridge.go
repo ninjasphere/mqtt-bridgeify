@@ -241,7 +241,7 @@ func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, err
 
 	opts.SetClientId(fmt.Sprintf("%d", time.Now().Unix()))
 
-	opts.SetWriteTimeout(15) // set a 15 second ping time for ELB
+	opts.SetKeepAlive(15) // set a 15 second ping time for ELB
 
 	// pretty much log the reason and quit
 	opts.SetOnConnectionLost(b.onConnectionLoss)
