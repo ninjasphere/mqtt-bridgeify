@@ -67,6 +67,9 @@ var localTopics = []replaceTopic{
 	{on: "$device/+/channel/+/+/event/+", replace: "$device", with: "$cloud/device"},
 	{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
 	{on: "$ninja/services/+", replace: "$ninja", with: "$cloud/ninja"},
+	
+	// temporary alternate topic to distinguish remote device replies from local-destined ones
+	{on: "$device/+/channel/+/+/reply", replace: "$device", with: "$cloud/remote_device"},
 }
 
 var cloudTopics = []replaceTopic{
@@ -76,6 +79,9 @@ var cloudTopics = []replaceTopic{
 	{on: "$cloud/device/+/channel/+/+/announce", replace: "$cloud/device", with: "$device"},
 	{on: "$cloud/device/+/channel/+/+/reply", replace: "$cloud/device", with: "$device"},
 	{on: "$cloud/ninja/services/rpc/+/+/reply", replace: "$cloud/ninja", with: "$ninja"},
+	
+	// temporary alternate topic to distinguish remote-originating device messages from local ones
+	{on: "$cloud/remote_device/+/channel/+/+", replace: "$cloud/remote_device", with: "$device"},
 }
 
 func createBridge(conf *Config) *Bridge {
