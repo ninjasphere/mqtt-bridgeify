@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 
 OWNER=ninjablocks
 BIN_NAME=mqtt-bridgeify
@@ -21,11 +21,14 @@ if [ ! -d ".gopath" ]; then
 	ln -sf ../../../.. .gopath/src/github.com/${OWNER}/${PROJECT_NAME}
 fi
 
-
 export GOPATH="$(pwd)/.gopath"
+
+if [ ! -d "$GOPATH/src/github.com/wolfeidau/org.eclipse.paho.mqtt.golang" ]; then
+	# Clone my fork of paho client
+	git clone -b develop https://github.com/wolfeidau/org.eclipse.paho.mqtt.golang $GOPATH/src/github.com/wolfeidau/org.eclipse.paho.mqtt.golang
+fi
 
 # move the working path and build
 cd .gopath/src/github.com/${OWNER}/${PROJECT_NAME}
 go get -d -v ./...
-go build -ldflags "-X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" -o ${BIN_NAME}
-mv ${BIN_NAME} ./bin
+go build -ldflags "-X main.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" -o bin/${BIN_NAME}
