@@ -1,0 +1,3 @@
+stop mqtt-bridgeify || true
+start mqtt-bridgeify || true
+
