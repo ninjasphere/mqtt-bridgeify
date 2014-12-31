@@ -65,7 +65,6 @@ var localTopics = []replaceTopic{
 	{on: "$node/+/module/status", replace: "$node", with: "$cloud/node"},
 	{on: "$device/+/channel/+/+", replace: "$device", with: "$cloud/device"},
 	{on: "$device/+/channel/+/+/event/+", replace: "$device", with: "$cloud/device"},
-	{on: "$device/+/channel/+/event/+", replace: "$device", with: "$cloud/device"}, // state events
 	{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
 	{on: "$ninja/services/+", replace: "$ninja", with: "$cloud/ninja"},
 
