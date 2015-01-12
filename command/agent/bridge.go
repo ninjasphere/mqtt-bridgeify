@@ -2,8 +2,10 @@ package agent
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -32,7 +34,7 @@ type Bridge struct {
 	localTopics []replaceTopic
 	cloudTopics []replaceTopic
 
-	cloudUrl string
+	cloudUrl *url.URL
 	token    string
 
 	timer       *time.Timer
@@ -103,7 +105,13 @@ func (b *Bridge) start(cloudUrl string, token string) (err error) {
 
 	b.Configured = true
 
-	b.cloudUrl = cloudUrl
+	url, err := url.Parse(cloudUrl)
+
+	if err != nil {
+		return err
+	}
+
+	b.cloudUrl = url
 	b.token = token
 
 	b.reconnectCh = make(chan bool, 1)
@@ -153,7 +161,7 @@ func (b *Bridge) connect() (err error) {
 		return err
 	}
 
-	if b.remote, err = b.buildClient(b.cloudUrl, b.token); err != nil {
+	if b.remote, err = b.buildClient(b.cloudUrl.String(), b.token); err != nil {
 		b.Connected = false
 		return err
 	}
@@ -175,7 +183,7 @@ func (b *Bridge) reconnect() (err error) {
 		return err
 	}
 
-	if b.remote, err = b.buildClient(b.cloudUrl, b.token); err != nil {
+	if b.remote, err = b.buildClient(b.cloudUrl.String(), b.token); err != nil {
 		b.Connected = false
 		return err
 	}
@@ -289,7 +297,8 @@ func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClie
 			b.log.Infof("(%s) topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
 		}
 		b.Counter++
-		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(msg.Payload()))
+		payload := b.updateSource(msg.Payload(), tag)
+		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(payload))
 	}
 }
 
@@ -337,4 +346,33 @@ func (b *Bridge) IsConnected() bool {
 		return false
 	}
 	return (b.remote.IsConnected() && b.local.IsConnected())
+}
+
+func (b *Bridge) updateSource(payload []byte, tag string) []byte {
+	var msg map[string]interface{}
+
+	err := json.Unmarshal(payload, &msg)
+
+	if err != nil {
+		return payload
+	}
+
+	if msg["$mesh_source"] == nil {
+		switch tag {
+		case "local":
+			msg["$mesh_source"] = b.conf.SerialNo
+		case "cloud":
+			msg["$mesh_source"] = "cloud-" + strings.Replace(b.cloudUrl.Host, ".", "_", -1) // encoded to look less wierd
+		}
+	}
+
+	v, err := json.Marshal(&msg)
+
+	if err != nil {
+		return payload
+	}
+
+	b.log.Infof("msg %s", string(v))
+
+	return v
 }
