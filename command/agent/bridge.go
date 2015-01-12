@@ -293,8 +293,8 @@ func (b *Bridge) unsubscribe(client *mqtt.MqttClient, topics []replaceTopic, tag
 
 func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClient) mqtt.MessageHandler {
 	return func(src *mqtt.MqttClient, msg mqtt.Message) {
-		if b.conf.IsDebug() {
-			b.log.Infof("(%s) topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
+		if b.log.IsDebugEnabled() {
+			b.log.Debugf("(%s) topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
 		}
 		b.Counter++
 		payload := b.updateSource(msg.Payload(), tag)
@@ -372,7 +372,9 @@ func (b *Bridge) updateSource(payload []byte, tag string) []byte {
 		return payload
 	}
 
-	b.log.Infof("msg %s", string(v))
+	if b.log.IsDebugEnabled() {
+		b.log.Debugf("msg %s", string(v))
+	}
 
 	return v
 }
