@@ -1,8 +1,8 @@
 package agent
 
 import (
+	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -349,32 +349,21 @@ func (b *Bridge) IsConnected() bool {
 }
 
 func (b *Bridge) updateSource(payload []byte, tag string) []byte {
-	var msg map[string]interface{}
 
-	err := json.Unmarshal(payload, &msg)
-
-	if err != nil {
-		return payload
-	}
-
-	if msg["$mesh_source"] == nil {
+	if !bytes.Contains(payload, []byte("$mesh-source")) {
 		switch tag {
 		case "local":
-			msg["$mesh_source"] = b.conf.SerialNo
+			payload = addMeshSource(b.conf.SerialNo, payload)
 		case "cloud":
-			msg["$mesh_source"] = "cloud-" + strings.Replace(b.cloudUrl.Host, ".", "_", -1) // encoded to look less wierd
+			payload = addMeshSource("cloud-"+strings.Replace(b.cloudUrl.Host, ".", "_", -1), payload) // encoded to look less wierd
 		}
 	}
 
-	v, err := json.Marshal(&msg)
+	b.log.Debugf("msg %s", string(payload))
 
-	if err != nil {
-		return payload
-	}
+	return payload
+}
 
-	if b.log.IsDebugEnabled() {
-		b.log.Debugf("msg %s", string(v))
-	}
-
-	return v
+func addMeshSource(source string, payload []byte) []byte {
+	return bytes.Replace(payload, []byte("{"), []byte(`{"$mesh-source":"`+source+`", `), 1)
 }
