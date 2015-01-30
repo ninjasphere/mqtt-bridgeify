@@ -61,29 +61,47 @@ func (r *replaceTopic) updated(originalTopic string) string {
 }
 
 var localTopics = []replaceTopic{
+	// location related topics (TODO: move to cloud userspace RPC)
 	{on: "$location/calibration", replace: "$location", with: "$cloud/location"},
 	{on: "$location/delete", replace: "$location", with: "$cloud/location"},
 	{on: "$device/+/+/rssi", replace: "$device", with: "$cloud/device"},
+	
+	// module health statistics
 	{on: "$node/+/module/status", replace: "$node", with: "$cloud/node"},
-	{on: "$device/+/channel/+/+", replace: "$device", with: "$cloud/device"},
-	{on: "$device/+/channel/+/+/event/+", replace: "$device", with: "$cloud/device"},
+	
+	// cloud userspace RPC requests
 	{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
 	{on: "$ninja/services/+", replace: "$ninja", with: "$cloud/ninja"},
 
 	// temporary alternate topic to distinguish remote device replies from local-destined ones
-	{on: "$device/+/channel/+/+/reply", replace: "$device", with: "$cloud/remote_device"},
+	// used by the phone app for remote actuations
+	// the alternate remote_ topic is to prevent a loopback with the below rule in the other direction
+	// TODO: use a tag like $mesh-source to prevent loops (never re-proxy msgs with your source)
+	{on: "$device/+/channel/+/reply", replace: "$device", with: "$cloud/remote_device"},
+	
+	// push up all local RPC methods in case the cloud is responding,
+	// this is currently used for the push notification channel
+	{on: "$device/+/channel/+", replace: "$device", with: "$cloud/device"},
 }
 
 var cloudTopics = []replaceTopic{
+	// location related topics
 	{on: "$cloud/location/calibration/progress", replace: "$cloud/location", with: "$location"},
 	{on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
-	{on: "$cloud/device/+/announce", replace: "$cloud/device", with: "$device"},
-	{on: "$cloud/device/+/channel/+/+/announce", replace: "$cloud/device", with: "$device"},
-	{on: "$cloud/device/+/channel/+/+/reply", replace: "$cloud/device", with: "$device"},
+	
+	// cloud userspace RPC replies
 	{on: "$cloud/ninja/services/rpc/+/+/reply", replace: "$cloud/ninja", with: "$ninja"},
 
-	// temporary alternate topic to distinguish remote-originating device messages from local ones
-	{on: "$cloud/remote_device/+/channel/#", replace: "$cloud/remote_device", with: "$device"},
+	// see comment for $device/+/channel/+/reply above
+	{on: "$cloud/remote_device/+/channel/+", replace: "$cloud/remote_device", with: "$device"},
+	
+	// allow cloud to announce devices and channels (used for phone on 3G and notification subscription channel)
+	{on: "$cloud/device/+/event/announce", replace: "$cloud/device", with: "$device"},
+	{on: "$cloud/device/+/channel/+/event/announce", replace: "$cloud/device", with: "$device"},
+	
+	// retrieve RPC responses from the cloud,
+	// this is currently used for the push notification channel
+	{on: "$cloud/device/+/channel/+/reply", replace: "$cloud/device", with: "$device"},
 }
 
 func createBridge(conf *Config) *Bridge {
