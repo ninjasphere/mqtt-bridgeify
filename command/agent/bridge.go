@@ -65,10 +65,10 @@ var localTopics = []replaceTopic{
 	{on: "$location/calibration", replace: "$location", with: "$cloud/location"},
 	{on: "$location/delete", replace: "$location", with: "$cloud/location"},
 	{on: "$device/+/+/rssi", replace: "$device", with: "$cloud/device"},
-	
+
 	// module health statistics
 	{on: "$node/+/module/status", replace: "$node", with: "$cloud/node"},
-	
+
 	// cloud userspace RPC requests
 	{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
 	{on: "$ninja/services/+", replace: "$ninja", with: "$cloud/ninja"},
@@ -78,27 +78,30 @@ var localTopics = []replaceTopic{
 	// the alternate remote_ topic is to prevent a loopback with the below rule in the other direction
 	// TODO: use a tag like $mesh-source to prevent loops (never re-proxy msgs with your source)
 	{on: "$device/+/channel/+/reply", replace: "$device", with: "$cloud/remote_device"},
-	
+
 	// push up all local RPC methods in case the cloud is responding,
 	// this is currently used for the push notification channel
 	{on: "$device/+/channel/+", replace: "$device", with: "$cloud/device"},
+
+	// push up state changes to the cloud
+	{on: "$device/+/channel/+/event/state", replace: "$device", with: "$cloud/device"},
 }
 
 var cloudTopics = []replaceTopic{
 	// location related topics
 	{on: "$cloud/location/calibration/progress", replace: "$cloud/location", with: "$location"},
 	{on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
-	
+
 	// cloud userspace RPC replies
 	{on: "$cloud/ninja/services/rpc/+/+/reply", replace: "$cloud/ninja", with: "$ninja"},
 
 	// see comment for $device/+/channel/+/reply above
 	{on: "$cloud/remote_device/+/channel/+", replace: "$cloud/remote_device", with: "$device"},
-	
+
 	// allow cloud to announce devices and channels (used for phone on 3G and notification subscription channel)
 	{on: "$cloud/device/+/event/announce", replace: "$cloud/device", with: "$device"},
 	{on: "$cloud/device/+/channel/+/event/announce", replace: "$cloud/device", with: "$device"},
-	
+
 	// retrieve RPC responses from the cloud,
 	// this is currently used for the push notification channel
 	{on: "$cloud/device/+/channel/+/reply", replace: "$cloud/device", with: "$device"},
