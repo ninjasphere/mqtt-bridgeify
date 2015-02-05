@@ -86,6 +86,7 @@ func (b *Bus) listen() {
 	topicFilter, _ := mqtt.NewTopicFilter(connectTopic, 0)
 	if receipt, err := b.client.StartSubscription(b.handleConnect, topicFilter); err != nil {
 		b.log.Errorf("Subscription Failed: %s", err)
+		panic(err)
 	} else {
 		<-receipt
 		b.log.Infof("Subscribed to: %+v", topicFilter)
@@ -94,6 +95,7 @@ func (b *Bus) listen() {
 	topicFilter, _ = mqtt.NewTopicFilter(disconnectTopic, 0)
 	if receipt, err := b.client.StartSubscription(b.handleDisconnect, topicFilter); err != nil {
 		b.log.Errorf("Subscription Failed: %s", err)
+		panic(err)
 	} else {
 		<-receipt
 		b.log.Infof("Subscribed to: %+v", topicFilter)
