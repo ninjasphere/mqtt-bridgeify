@@ -241,7 +241,7 @@ func (b *Bridge) disconnectAll() {
 		b.local.Disconnect(100)
 	}
 	if b.remote != nil && b.remote.IsConnected() {
-		b.local.Disconnect(100)
+		b.remote.Disconnect(100)
 	}
 }
 
