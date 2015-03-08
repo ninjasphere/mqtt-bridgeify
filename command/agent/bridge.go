@@ -283,42 +283,52 @@ func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, err
 
 	client := mqtt.NewClient(opts)
 	_, err := client.Start()
+
 	return client, err
 }
 
 func (b *Bridge) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []replaceTopic, tag string) (err error) {
+
+	var (
+		handler mqtt.MessageHandler
+	)
+
 	for _, topic := range topics {
 
 		topicFilter, _ := mqtt.NewTopicFilter(topic.on, 0)
 		b.log.Infof("(%s) subscribed to %s", tag, topic.on)
 
-		if receipt, err := src.StartSubscription(b.buildHandler(topic, tag, dst), topicFilter); err != nil {
+		handler = b.buildHandler(topic, b.buildSource(tag), b.remote)
+
+		if _, err = src.StartSubscription(handler, topicFilter); err != nil {
 			return err
-		} else {
-			<-receipt
-			b.log.Infof("(%s) subscribed to %+v", tag, topicFilter)
 		}
+
+		b.log.Infof("(%s) subscribed to %+v", tag, topicFilter)
 	}
 
 	return nil
 }
 
 func (b *Bridge) unsubscribe(client *mqtt.MqttClient, topics []replaceTopic, tag string) {
+
 	topicNames := []string{}
+
 	for _, topic := range topics {
 		topicNames = append(topicNames, topic.on)
 	}
+
 	b.log.Infof("(%s) unsubscribed to %s", tag, topicNames)
 	client.EndSubscription(topicNames...)
 }
 
-func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClient) mqtt.MessageHandler {
+func (b *Bridge) buildHandler(topic replaceTopic, source string, dst *mqtt.MqttClient) mqtt.MessageHandler {
 	return func(src *mqtt.MqttClient, msg mqtt.Message) {
 		if b.log.IsDebugEnabled() {
-			b.log.Debugf("(%s) topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
+			b.log.Debugf("(%s) topic: %s updated: %s len: %d", source, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
 		}
 		b.Counter++
-		payload := b.updateSource(msg.Payload(), tag)
+		payload := b.updateSource(msg.Payload(), source)
 		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(payload))
 	}
 }
@@ -369,22 +379,25 @@ func (b *Bridge) IsConnected() bool {
 	return (b.remote.IsConnected() && b.local.IsConnected())
 }
 
-func (b *Bridge) updateSource(payload []byte, tag string) []byte {
+func (b *Bridge) buildSource(tag string) string {
+
+	switch tag {
+	case "local":
+		return b.conf.SerialNo
+	case "cloud":
+		return "cloud-" + strings.Replace(b.cloudUrl.Host, ".", "_", -1) // encoded to look less wierd
+	}
+
+	return ""
+}
+
+func (b *Bridge) updateSource(payload []byte, source string) []byte {
 
 	if !bytes.Contains(payload, []byte("$mesh-source")) {
-		switch tag {
-		case "local":
-			payload = addMeshSource(b.conf.SerialNo, payload)
-		case "cloud":
-			payload = addMeshSource("cloud-"+strings.Replace(b.cloudUrl.Host, ".", "_", -1), payload) // encoded to look less wierd
-		}
+		payload = bytes.Replace(payload, []byte("{"), []byte(`{"$mesh-source":"`+source+`", `), 1)
 	}
 
 	b.log.Debugf("msg %s", string(payload))
 
 	return payload
-}
-
-func addMeshSource(source string, payload []byte) []byte {
-	return bytes.Replace(payload, []byte("{"), []byte(`{"$mesh-source":"`+source+`", `), 1)
 }
