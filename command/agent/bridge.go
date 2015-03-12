@@ -295,22 +295,17 @@ func (b *Bridge) buildClient(server string, token string) (*mqtt.MqttClient, err
 
 func (b *Bridge) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []replaceTopic, tag string) (err error) {
 
-	var (
-		handler mqtt.MessageHandler
-	)
-
 	for _, topic := range topics {
 
 		topicFilter, _ := mqtt.NewTopicFilter(topic.on, 0)
 		b.log.Infof("(%s) subscribed to %s", tag, topic.on)
 
-		handler = b.buildHandler(topic, tag, b.remote)
-
-		if _, err = src.StartSubscription(handler, topicFilter); err != nil {
+		if receipt, err := src.StartSubscription(b.buildHandler(topic, tag, dst), topicFilter); err != nil {
 			return err
+		} else {
+			<-receipt
+			b.log.Infof("(%s) subscribed to %+v", tag, topicFilter)
 		}
-
-		b.log.Infof("(%s) subscribed to %+v", tag, topicFilter)
 	}
 
 	return nil
@@ -333,7 +328,6 @@ func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClie
 		if b.log.IsDebugEnabled() {
 			b.log.Debugf("(%s) topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
 		}
-		b.Counter++
 		b.updateCounters(tag, msg)
 		payload := b.updateSource(msg.Payload(), b.buildSource(tag))
 		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(payload))
