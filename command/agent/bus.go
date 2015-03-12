@@ -61,7 +61,13 @@ type statsEvent struct {
 
 	Connected  bool  `json:"connected"`
 	Configured bool  `json:"configured"`
-	Count      int64 `json:"count"`
+	Timestamp  int64 `json:"timestamp"`
+
+	IngressCounter int64 `json:"ingressCounter"`
+	EgressCounter  int64 `json:"egressCounter"`
+
+	IngressBytes int64 `json:"ingressBytes"`
+	EgressBytes  int64 `json:"egressBytes"`
 }
 
 func createBus(conf *Config, agent *Agent) *Bus {

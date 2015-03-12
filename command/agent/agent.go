@@ -2,6 +2,7 @@ package agent
 
 import (
 	"runtime"
+	"time"
 
 	"github.com/juju/loggo"
 )
@@ -64,12 +65,16 @@ func (a *Agent) getStatus() statsEvent {
 	runtime.ReadMemStats(a.memstats)
 
 	return statsEvent{
-		LastError:  lastError,
-		Alloc:      a.memstats.Alloc,
-		HeapAlloc:  a.memstats.HeapAlloc,
-		TotalAlloc: a.memstats.TotalAlloc,
-		Connected:  a.bridge.IsConnected(),
-		Configured: a.bridge.Configured,
-		Count:      a.bridge.Counter,
+		LastError:      lastError,
+		Alloc:          a.memstats.Alloc,
+		HeapAlloc:      a.memstats.HeapAlloc,
+		TotalAlloc:     a.memstats.TotalAlloc,
+		Connected:      a.bridge.IsConnected(),
+		Configured:     a.bridge.Configured,
+		Timestamp:      time.Now().Unix(),
+		IngressCounter: a.bridge.IngressCounter,
+		IngressBytes:   a.bridge.IngressBytes,
+		EgressCounter:  a.bridge.EgressCounter,
+		EgressBytes:    a.bridge.EgressBytes,
 	}
 }

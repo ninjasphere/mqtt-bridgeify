@@ -45,6 +45,12 @@ type Bridge struct {
 	Connected  bool
 	Counter    int64
 
+	IngressCounter int64
+	EgressCounter  int64
+
+	IngressBytes int64
+	EgressBytes  int64
+
 	LastError error
 
 	bridgeLock sync.Mutex
@@ -67,7 +73,7 @@ var localTopics = []replaceTopic{
 	{on: "$device/+/+/rssi", replace: "$device", with: "$cloud/device"},
 
 	// module health statistics
-	{on: "$node/+/module/status", replace: "$node", with: "$cloud/node"},
+	//{on: "$node/+/module/status", replace: "$node", with: "$cloud/node"},
 
 	// cloud userspace RPC requests
 	{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
@@ -298,7 +304,7 @@ func (b *Bridge) subscribe(src *mqtt.MqttClient, dst *mqtt.MqttClient, topics []
 		topicFilter, _ := mqtt.NewTopicFilter(topic.on, 0)
 		b.log.Infof("(%s) subscribed to %s", tag, topic.on)
 
-		handler = b.buildHandler(topic, b.buildSource(tag), b.remote)
+		handler = b.buildHandler(topic, tag, b.remote)
 
 		if _, err = src.StartSubscription(handler, topicFilter); err != nil {
 			return err
@@ -322,13 +328,14 @@ func (b *Bridge) unsubscribe(client *mqtt.MqttClient, topics []replaceTopic, tag
 	client.EndSubscription(topicNames...)
 }
 
-func (b *Bridge) buildHandler(topic replaceTopic, source string, dst *mqtt.MqttClient) mqtt.MessageHandler {
+func (b *Bridge) buildHandler(topic replaceTopic, tag string, dst *mqtt.MqttClient) mqtt.MessageHandler {
 	return func(src *mqtt.MqttClient, msg mqtt.Message) {
 		if b.log.IsDebugEnabled() {
-			b.log.Debugf("(%s) topic: %s updated: %s len: %d", source, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
+			b.log.Debugf("(%s) topic: %s updated: %s len: %d", tag, msg.Topic(), topic.updated(msg.Topic()), len(msg.Payload()))
 		}
 		b.Counter++
-		payload := b.updateSource(msg.Payload(), source)
+		b.updateCounters(tag, msg)
+		payload := b.updateSource(msg.Payload(), b.buildSource(tag))
 		dst.PublishMessage(topic.updated(msg.Topic()), mqtt.NewMessage(payload))
 	}
 }
@@ -400,4 +407,16 @@ func (b *Bridge) updateSource(payload []byte, source string) []byte {
 	b.log.Debugf("msg %s", string(payload))
 
 	return payload
+}
+
+func (b *Bridge) updateCounters(tag string, msg mqtt.Message) {
+	switch tag {
+	case "local":
+		b.EgressCounter++
+		b.EgressBytes += int64(len(msg.Bytes())) // message size not payload size
+	case "cloud":
+		b.IngressCounter++
+		b.IngressBytes += int64(len(msg.Bytes())) // message size not payload size
+	}
+
 }
