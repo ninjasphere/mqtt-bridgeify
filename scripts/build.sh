@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set -x
 
 OWNER=ninjablocks
 BIN_NAME=mqtt-bridgeify
@@ -21,6 +22,12 @@ if [ ! -d ".gopath" ]; then
 	ln -sf ../../../.. .gopath/src/github.com/${OWNER}/${PROJECT_NAME}
 fi
 
+PAHO_PATH=.gopath/src/git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git
+
+if [ ! -d $PAHO_PATH ]; then
+	git clone http://git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git $PAHO_PATH
+	(cd $PAHO_PATH && git checkout 0d6c6e73b249ca8d48fde878b4d1cfbb4cd45a5e)
+fi
 
 export GOPATH="$(pwd)/.gopath"
 
