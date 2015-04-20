@@ -64,3 +64,7 @@ var cloudTopics = []replaceTopic{
 	{on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
 }
 ```
+
+# Licensing
+
+mqtt-bridgeify is licensed under the MIT License. See LICENSE for the full license text.
