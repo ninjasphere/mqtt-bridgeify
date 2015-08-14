@@ -5,8 +5,8 @@ import (
 	"os/signal"
 
 	"github.com/mitchellh/cli"
-	"github.com/ninjablocks/mqtt-bridgeify/command"
-	"github.com/ninjablocks/mqtt-bridgeify/command/agent"
+	"github.com/ninjasphere/mqtt-bridgeify/command"
+	"github.com/ninjasphere/mqtt-bridgeify/command/agent"
 )
 
 var Commands map[string]cli.CommandFactory
