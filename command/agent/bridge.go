@@ -91,9 +91,6 @@ var localTopics = []replaceTopic{
 
 	// push up state changes to the cloud
 	{on: "$device/+/channel/+/event/state", replace: "$device", with: "$cloud/device"},
-
-	// push up control state changes to the cloud
-	{on: "$device/+/channel/+/event/controlstate", replace: "$device", with: "$cloud/device"},
 }
 
 var cloudTopics = []replaceTopic{
