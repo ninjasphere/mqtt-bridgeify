@@ -78,6 +78,7 @@ var localTopics = []replaceTopic{
 	// cloud userspace RPC requests
 	{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
 	{on: "$ninja/services/+", replace: "$ninja", with: "$cloud/ninja"},
+	{on: "$ninja/services/demandcontrol/reply", replace: "$ninja", with: "$cloud/ninja"},
 
 	// temporary alternate topic to distinguish remote device replies from local-destined ones
 	// used by the phone app for remote actuations
@@ -101,6 +102,7 @@ var cloudTopics = []replaceTopic{
 	// cloud userspace RPC replies
 	{on: "$cloud/ninja/services/rpc/+/+/reply", replace: "$cloud/ninja", with: "$ninja"},
 	{on: "$cloud/ninja/services/+/reply", replace: "$cloud/ninja", with: "$ninja"},
+	{on: "$ninja/services/demandcontrol", replace: "$ninja", with: "$cloud/ninja"},
 
 	// see comment for $device/+/channel/+/reply above
 	{on: "$cloud/remote_device/+/channel/+", replace: "$cloud/remote_device", with: "$device"},
