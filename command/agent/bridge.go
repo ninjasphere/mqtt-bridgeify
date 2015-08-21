@@ -76,8 +76,8 @@ var localTopics = []replaceTopic{
 	//{on: "$node/+/module/status", replace: "$node", with: "$cloud/node"},
 
 	// cloud userspace RPC requests
-	{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
-	{on: "$ninja/services/+", replace: "$ninja", with: "$cloud/ninja"},
+	//{on: "$ninja/services/rpc/+/+", replace: "$ninja", with: "$cloud/ninja"},
+	//{on: "$ninja/services/+", replace: "$ninja", with: "$cloud/ninja"},
 	{on: "$ninja/services/demandcontrol/reply", replace: "$ninja", with: "$cloud/ninja"},
 
 	// temporary alternate topic to distinguish remote device replies from local-destined ones
@@ -100,8 +100,8 @@ var cloudTopics = []replaceTopic{
 	{on: "$cloud/device/+/+/location", replace: "$cloud/device", with: "$device"},
 
 	// cloud userspace RPC replies
-	{on: "$cloud/ninja/services/rpc/+/+/reply", replace: "$cloud/ninja", with: "$ninja"},
-	{on: "$cloud/ninja/services/+/reply", replace: "$cloud/ninja", with: "$ninja"},
+	//{on: "$cloud/ninja/services/rpc/+/+/reply", replace: "$cloud/ninja", with: "$ninja"},
+	//{on: "$cloud/ninja/services/+/reply", replace: "$cloud/ninja", with: "$ninja"},
 	{on: "$ninja/services/demandcontrol", replace: "$ninja", with: "$cloud/ninja"},
 
 	// see comment for $device/+/channel/+/reply above
