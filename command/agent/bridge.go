@@ -100,7 +100,6 @@ var cloudTopics = []replaceTopic{
 
 	// cloud userspace RPC replies
 	{on: "$cloud/ninja/services/rpc/+/+/reply", replace: "$cloud/ninja", with: "$ninja"},
-	{on: "$cloud/ninja/services/+/reply", replace: "$cloud/ninja", with: "$ninja"},
 
 	// see comment for $device/+/channel/+/reply above
 	{on: "$cloud/remote_device/+/channel/+", replace: "$cloud/remote_device", with: "$device"},
