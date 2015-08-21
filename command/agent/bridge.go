@@ -91,6 +91,9 @@ var localTopics = []replaceTopic{
 
 	// push up state changes to the cloud
 	{on: "$device/+/channel/+/event/state", replace: "$device", with: "$cloud/device"},
+
+	// topic used to listen to replies from client-hosted services
+	{on: "$ninja/client-services/+/reply", replace: "$ninja", with: "$cloud/ninja"},
 }
 
 var cloudTopics = []replaceTopic{
@@ -111,6 +114,9 @@ var cloudTopics = []replaceTopic{
 	// retrieve RPC responses from the cloud,
 	// this is currently used for the push notification channel
 	{on: "$cloud/device/+/channel/+/reply", replace: "$cloud/device", with: "$device"},
+
+	// topic used to listen to services published by clients to the cloud
+	{on: "$ninja/client-services/+", replace: "$ninja", with: "$cloud/ninja"},
 }
 
 func createBridge(conf *Config) *Bridge {
