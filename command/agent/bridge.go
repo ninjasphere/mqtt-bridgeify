@@ -116,7 +116,7 @@ var cloudTopics = []replaceTopic{
 	{on: "$cloud/device/+/channel/+/reply", replace: "$cloud/device", with: "$device"},
 
 	// topic used to listen to services published by clients to the cloud
-	{on: "$ninja/client-services/+", replace: "$ninja", with: "$cloud/ninja"},
+	{on: "$cloud/ninja/client-services/+", replace: "$cloud/ninja", with: "$ninja"},
 }
 
 func createBridge(conf *Config) *Bridge {
