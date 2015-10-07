@@ -3,10 +3,12 @@ package agent
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 	"github.com/hashicorp/logutils"
 	"github.com/juju/loggo"
 	"github.com/mitchellh/cli"
@@ -31,6 +33,7 @@ type Config struct {
 	LocalUrl    string
 	SerialNo    string
 	Debug       bool
+	Trace       bool
 	StatusTimer int
 }
 
@@ -45,6 +48,7 @@ func (c *Command) readConfig() *Config {
 	cmdFlags.StringVar(&cmdConfig.LocalUrl, "localurl", "tcp://localhost:1883", "cloud url to connect to")
 	cmdFlags.StringVar(&cmdConfig.SerialNo, "serial", "unknown", "the serial number of the device")
 	cmdFlags.BoolVar(&cmdConfig.Debug, "debug", false, "enable debug")
+	cmdFlags.BoolVar(&cmdConfig.Trace, "trace", false, "enable trace")
 	cmdFlags.IntVar(&cmdConfig.StatusTimer, "status", 30, "time in seconds between status messages")
 
 	if err := cmdFlags.Parse(c.args); err != nil {
@@ -56,6 +60,13 @@ func (c *Command) readConfig() *Config {
 		loggo.GetLogger("").SetLogLevel(loggo.DEBUG)
 	} else {
 		loggo.GetLogger("").SetLogLevel(loggo.INFO)
+	}
+
+	if cmdConfig.Trace {
+		// enable low-level tracing on mqtt library
+		for _, l := range []**log.Logger{&mqtt.DEBUG, &mqtt.ERROR, &mqtt.CRITICAL, &mqtt.WARN} {
+			*l = log.New(os.Stderr, "", 0)
+		}
 	}
 
 	return &cmdConfig
