@@ -1,3 +1,5 @@
+(
 stop mqtt-bridgeify || true
 start mqtt-bridgeify || true
+) > /tmp/mqtt-bridgeify-post-install.log 2>&1
 
