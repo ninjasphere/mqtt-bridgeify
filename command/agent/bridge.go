@@ -375,8 +375,24 @@ func (b *Bridge) onConnectionLoss(client *mqtt.MqttClient, reason error) {
 	// we are now disconnected
 	b.Connected = false
 
+	// setup a watchdog timer to catch failure to disconnect on ping loss
+	// see https://gist.github.com/jonseymour/5b21b015c640717ddf9d for example
+
+	completed := make(chan struct{})
+	timer := time.NewTimer(time.Minute * 1)
+	go func() {
+		select {
+		case <-timer.C:
+			panic("watchdog timed out after 1 minute")
+		case <-completed:
+		}
+	}()
+
 	b.scheduleReconnect(reason)
 
+	// cleanup the watchdog timer
+	close(completed)
+	timer.Stop()
 }
 
 func (b *Bridge) IsConnected() bool {
