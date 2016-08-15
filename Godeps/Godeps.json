@@ -1,0 +1,12 @@
+{
+	"ImportPath": "github.com/ninjasphere/mqtt-bridgeify",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v74",
+	"Deps": [
+		{
+			"ImportPath": "github.com/juju/loggo",
+			"Comment": "known-compatible-2-g8477fc9",
+			"Rev": "8477fc936adf0e382d680310047ca27e128a309a"
+		}
+	]
+}
