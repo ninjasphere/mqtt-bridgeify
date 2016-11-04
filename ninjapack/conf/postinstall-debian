@@ -1,0 +1,5 @@
+(
+systemctl stop mqtt-bridgeify || true
+systemctl start mqtt-bridgeify || true
+) > /tmp/mqtt-bridgeify-post-install.log 2>&1
+
