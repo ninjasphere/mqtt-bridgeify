@@ -3,7 +3,7 @@ Description=NinjaBlocks MQTT Bridge
 After=network.target 
 
 [Service]
-ExecStart=/bin/bash -c '. /etc/profile.d/ninja.sh && /opt/ninjablocks/bin/mqtt-bridgeify agent --serial $$(sphere-serial)'
+ExecStart=/bin/bash -c '. /etc/profile && exec /opt/ninjablocks/bin/mqtt-bridgeify agent --serial $$(sphere-serial)'
 KillMode=process
 Restart=on-failure
 
